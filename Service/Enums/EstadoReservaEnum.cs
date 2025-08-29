@@ -6,11 +6,10 @@ using System.Threading.Tasks;
 
 namespace Service.Enums
 {
-    public enum TipoSuscripcion
+    public enum EstadoReservaEnum
     {
-        PorHora,
-        Diario,
-        Semanal,
-        Mensual
+        Activa,
+        Finalizada,
+        Cancelada
     }
 }

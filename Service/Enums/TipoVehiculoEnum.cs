@@ -6,12 +6,11 @@ using System.Threading.Tasks;
 
 namespace Service.Enums
 {
-    public enum MetodoPago
+    public enum TipoVehiculoEnum
     {
-        Efectivo,
-        TarjetaCredito,
-        TarjetaDebito,
-        Transferencia,
-        MercadoPago
+        Auto,
+        Moto,
+        Camioneta,
+        Bicicleta
     }
 }

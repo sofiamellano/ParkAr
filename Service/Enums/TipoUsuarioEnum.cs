@@ -6,9 +6,9 @@ using System.Threading.Tasks;
 
 namespace Service.Enums
 {
-    public enum RolUsuario
+    public enum TipoUsuarioEnum
     {
         Cliente,
-        Administrador
+        Admin
     }
 }

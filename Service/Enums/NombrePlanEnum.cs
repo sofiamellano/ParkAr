@@ -6,11 +6,12 @@ using System.Threading.Tasks;
 
 namespace Service.Enums
 {
-    public enum EstadoReserva
+    public enum NombrePlanEnum
     {
-        Pendiente,
-        Activa,
-        Finalizada,
-        Cancelada
+        Anual,
+        Mensual,
+        Semanal,
+        Diario,
+        PorHora
     }
 }

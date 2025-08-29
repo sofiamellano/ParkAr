@@ -10,9 +10,9 @@ namespace Service.Models
     {
         public int Id { get; set; }
         public int Numero { get; set; }
-        public bool Ocupado { get; set; }
+        public bool IsDeleted { get; set; }
 
+        // Relaciones
         public ICollection<Reserva>? Reservas { get; set; }
     }
-
 }

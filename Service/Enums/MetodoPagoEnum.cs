@@ -6,10 +6,10 @@ using System.Threading.Tasks;
 
 namespace Service.Enums
 {
-    public enum EstadoSuscripcion
+    public enum MetodoPagoEnum
     {
-        Activo,
-        Vencido,
-        Cancelado
+        Efectivo,
+        Tarjeta,
+        App
     }
 }
