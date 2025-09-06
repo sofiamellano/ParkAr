@@ -1,71 +1,124 @@
-﻿using Backend.DataContext;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Backend.DataContext;
 using Service.Models;
+using Microsoft.AspNetCore.Authorization;
 
 namespace Backend.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class PagosController : ControllerBase
     {
         private readonly ParkARContext _context;
+
         public PagosController(ParkARContext context)
         {
             _context = context;
         }
 
         [HttpGet]
-        public IActionResult GetPagos()
+        public async Task<ActionResult<IEnumerable<Pago>>> GetPagos([FromQuery] int? usuarioId = null)
         {
-            var pagos = _context.Pagos.Where(p => !p.IsDeleted).ToList();
-            return Ok(pagos);
+            var query = _context.Pagos.AsNoTracking().Include(p => p.Usuario).Include(p => p.Reserva).Include(p => p.Suscripcion).AsQueryable();
+            if (usuarioId.HasValue)
+            {
+                query = query.Where(p => p.UsuarioId == usuarioId.Value);
+            }
+            return await query.ToListAsync();
+        }
+
+        [HttpGet("deleteds")]
+        public async Task<ActionResult<IEnumerable<Pago>>> GetDeletedPagos([FromQuery] int? usuarioId = null)
+        {
+            var query = _context.Pagos.AsNoTracking().IgnoreQueryFilters().Where(p => p.IsDeleted).Include(p => p.Usuario).Include(p => p.Reserva).Include(p => p.Suscripcion).AsQueryable();
+            if (usuarioId.HasValue)
+            {
+                query = query.Where(p => p.UsuarioId == usuarioId.Value);
+            }
+            return await query.ToListAsync();
         }
 
         [HttpGet("{id}")]
-        public IActionResult GetPago(int id)
+        public async Task<ActionResult<Pago>> GetPago(int id)
         {
-            var pago = _context.Pagos.FirstOrDefault(p => p.Id == id && !p.IsDeleted);
-            if (pago == null) return NotFound();
-            return Ok(pago);
-        }
-
-        [HttpPost]
-        public IActionResult CreatePago([FromBody] Pago pago)
-        {
-            if (pago == null) return BadRequest();
-            _context.Pagos.Add(pago);
-            _context.SaveChanges();
-            return CreatedAtAction(nameof(GetPago), new { id = pago.Id }, pago);
+            var pago = await _context.Pagos.AsNoTracking().Include(p => p.Usuario).Include(p => p.Reserva).Include(p => p.Suscripcion).FirstOrDefaultAsync(p => p.Id == id);
+            if (pago == null)
+            {
+                return NotFound();
+            }
+            return pago;
         }
 
         [HttpPut("{id}")]
-        public IActionResult UpdatePago(int id, [FromBody] Pago pago)
+        public async Task<IActionResult> PutPago(int id, Pago pago)
         {
-            if (pago == null || pago.Id != id) return BadRequest();
-            var existing = _context.Pagos.Find(id);
-            if (existing == null) return NotFound();
-
-            existing.Monto = pago.Monto;
-            existing.Metodo = pago.Metodo;
-            existing.Fecha = pago.Fecha;
-            existing.Concepto = pago.Concepto;
-            existing.UsuarioId = pago.UsuarioId;
-            existing.ReservaId = pago.ReservaId;
-            existing.SuscripcionId = pago.SuscripcionId;
-
-            _context.Pagos.Update(existing);
-            _context.SaveChanges();
+            if (id != pago.Id)
+            {
+                return BadRequest();
+            }
+            _context.Entry(pago).State = EntityState.Modified;
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                if (!PagoExists(id))
+                {
+                    return NotFound();
+                }
+                else
+                {
+                    throw;
+                }
+            }
             return NoContent();
         }
 
-        [HttpDelete("{id}")]
-        public IActionResult DeletePago(int id)
+        [HttpPost]
+        public async Task<ActionResult<Pago>> PostPago(Pago pago)
         {
-            var pago = _context.Pagos.Find(id);
-            if (pago == null) return NotFound();
+            _context.Pagos.Add(pago);
+            await _context.SaveChangesAsync();
+            return CreatedAtAction("GetPago", new { id = pago.Id }, pago);
+        }
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeletePago(int id)
+        {
+            var pago = await _context.Pagos.FindAsync(id);
+            if (pago == null)
+            {
+                return NotFound();
+            }
             pago.IsDeleted = true;
-            _context.SaveChanges();
+            _context.Pagos.Update(pago);
+            await _context.SaveChangesAsync();
             return NoContent();
+        }
+
+        [HttpPut("restore/{id}")]
+        public async Task<IActionResult> RestorePago(int id)
+        {
+            var pago = await _context.Pagos.IgnoreQueryFilters().FirstOrDefaultAsync(p => p.Id == id);
+            if (pago == null)
+            {
+                return NotFound();
+            }
+            pago.IsDeleted = false;
+            _context.Pagos.Update(pago);
+            await _context.SaveChangesAsync();
+            return NoContent();
+        }
+
+        private bool PagoExists(int id)
+        {
+            return _context.Pagos.Any(e => e.Id == id);
         }
     }
 }

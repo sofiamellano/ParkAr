@@ -15,6 +15,7 @@ namespace Service.Utils
         public static string Suscripcion { get; set; } = "suscripciones";
         public static string Reserva { get; set; } = "reservas";
         public static string Pago { get; set; } = "pagos";
+        public  static string Login { get; set; } = "auth";
 
         public static string GetEndpoint(string name)
         {
@@ -27,6 +28,7 @@ namespace Service.Utils
                 nameof(Suscripcion) => Suscripcion,
                 nameof(Reserva) => Reserva,
                 nameof(Pago) => Pago,
+                nameof(Login) => Login,
                 _ => throw new ArgumentException($"Endpoint '{name}' no está definido.")
             };
         }

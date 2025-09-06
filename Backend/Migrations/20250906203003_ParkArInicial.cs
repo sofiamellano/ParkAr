@@ -4,15 +4,44 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
+#pragma warning disable CA1814 // Prefer jagged arrays over multidimensional
+
 namespace Backend.Migrations
 {
     /// <inheritdoc />
-    public partial class InicialParkAR : Migration
+    public partial class ParkArInicial : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.AlterDatabase()
+                .Annotation("MySql:CharSet", "utf8mb4");
+
+            migrationBuilder.CreateTable(
+                name: "Configuraciones",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("MySql:ValueGenerationStrategy", MySqlValueGenerationStrategy.IdentityColumn),
+                    NombreEmpresa = table.Column<string>(type: "longtext", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    Direccion = table.Column<string>(type: "longtext", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    Telefono = table.Column<string>(type: "longtext", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    Email = table.Column<string>(type: "longtext", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    Cuit = table.Column<string>(type: "longtext", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    HorarioApertura = table.Column<TimeSpan>(type: "time(6)", nullable: false),
+                    HorarioCierre = table.Column<TimeSpan>(type: "time(6)", nullable: false),
+                    PrecioHora = table.Column<decimal>(type: "decimal(65,30)", nullable: false),
+                    IsDeleted = table.Column<bool>(type: "tinyint(1)", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Configuraciones", x => x.Id);
+                })
                 .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.CreateTable(
@@ -201,6 +230,75 @@ namespace Backend.Migrations
                 })
                 .Annotation("MySql:CharSet", "utf8mb4");
 
+            migrationBuilder.InsertData(
+                table: "Configuraciones",
+                columns: new[] { "Id", "Cuit", "Direccion", "Email", "HorarioApertura", "HorarioCierre", "IsDeleted", "NombreEmpresa", "PrecioHora", "Telefono" },
+                values: new object[] { 1, "30-12345678-9", "Av. Siempre Viva 123", "contacto@parkar.com", new TimeSpan(0, 8, 0, 0, 0), new TimeSpan(0, 22, 0, 0, 0), false, "ParkAR", 150.00m, "341-555-1234" });
+
+            migrationBuilder.InsertData(
+                table: "Lugares",
+                columns: new[] { "Id", "IsDeleted", "Numero" },
+                values: new object[,]
+                {
+                    { 1, false, 101 },
+                    { 2, false, 102 }
+                });
+
+            migrationBuilder.InsertData(
+                table: "Planes",
+                columns: new[] { "Id", "Descripcion", "Duracion", "IsDeleted", "Nombre", "Precio" },
+                values: new object[,]
+                {
+                    { 1, "Acceso ilimitado por un mes", 30, false, "Plan Mensual", 5000m },
+                    { 2, "Pago por cada hora de uso", null, false, "Plan por Hora", 200m }
+                });
+
+            migrationBuilder.InsertData(
+                table: "Usuarios",
+                columns: new[] { "Id", "Email", "IsDeleted", "Nombre", "Password", "TipoUsuario" },
+                values: new object[,]
+                {
+                    { 1, "juan@example.com", false, "Juan Pérez", "hashed123", 0 },
+                    { 2, "admin@example.com", false, "Admin Root", "hashed456", 1 }
+                });
+
+            migrationBuilder.InsertData(
+                table: "Suscripciones",
+                columns: new[] { "Id", "Estado", "FechaFin", "FechaInicio", "IsDeleted", "PlanId", "UsuarioId" },
+                values: new object[,]
+                {
+                    { 1, 0, new DateTime(2025, 8, 31, 0, 0, 0, 0, DateTimeKind.Unspecified), new DateTime(2025, 8, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), false, 1, 1 },
+                    { 2, 1, new DateTime(2025, 8, 20, 0, 0, 0, 0, DateTimeKind.Unspecified), new DateTime(2025, 8, 20, 0, 0, 0, 0, DateTimeKind.Unspecified), false, 2, 1 }
+                });
+
+            migrationBuilder.InsertData(
+                table: "Vehiculos",
+                columns: new[] { "Id", "IsDeleted", "Patente", "TipoVehiculo", "UsuarioId" },
+                values: new object[,]
+                {
+                    { 1, false, "ABC123", 0, 1 },
+                    { 2, false, "XYZ789", 1, 1 }
+                });
+
+            migrationBuilder.InsertData(
+                table: "Pagos",
+                columns: new[] { "Id", "Concepto", "Fecha", "IsDeleted", "Metodo", "Monto", "ReservaId", "SuscripcionId", "UsuarioId" },
+                values: new object[] { 2, 0, new DateTime(2025, 8, 1, 8, 0, 0, 0, DateTimeKind.Unspecified), false, 2, 5000.00m, null, 1, 1 });
+
+            migrationBuilder.InsertData(
+                table: "Reservas",
+                columns: new[] { "Id", "EstadoReserva", "FechaFin", "FechaInicio", "IsDeleted", "LugarId", "UsuarioId", "VehiculoId" },
+                values: new object[,]
+                {
+                    { 1, 1, new DateTime(2025, 8, 25, 12, 0, 0, 0, DateTimeKind.Unspecified), new DateTime(2025, 8, 25, 9, 0, 0, 0, DateTimeKind.Unspecified), false, 1, 1, 1 },
+                    { 2, 0, new DateTime(2025, 8, 29, 18, 0, 0, 0, DateTimeKind.Unspecified), new DateTime(2025, 8, 29, 15, 0, 0, 0, DateTimeKind.Unspecified), false, 2, 1, 2 }
+                });
+
+            migrationBuilder.InsertData(
+                table: "Pagos",
+                columns: new[] { "Id", "Concepto", "Fecha", "IsDeleted", "Metodo", "Monto", "ReservaId", "SuscripcionId", "UsuarioId" },
+                values: new object[] { 1, 1, new DateTime(2025, 8, 25, 12, 5, 0, 0, DateTimeKind.Unspecified), false, 1, 600.00m, 1, null, 1 });
+
             migrationBuilder.CreateIndex(
                 name: "IX_Pagos_ReservaId",
                 table: "Pagos",
@@ -250,6 +348,9 @@ namespace Backend.Migrations
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.DropTable(
+                name: "Configuraciones");
+
             migrationBuilder.DropTable(
                 name: "Pagos");
 

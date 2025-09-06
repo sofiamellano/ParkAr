@@ -1,65 +1,140 @@
-﻿using Backend.DataContext;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Backend.DataContext;
 using Service.Models;
+using Microsoft.AspNetCore.Authorization;
 
 namespace Backend.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class LugaresController : ControllerBase
     {
         private readonly ParkARContext _context;
+
         public LugaresController(ParkARContext context)
         {
             _context = context;
         }
 
+        // GET: api/Lugares
         [HttpGet]
-        public IActionResult GetLugares()
+        public async Task<ActionResult<IEnumerable<Lugar>>> GetLugares([FromQuery] int? filtro = null)
         {
-            var lugares = _context.Lugares.Where(l => !l.IsDeleted).ToList();
-            return Ok(lugares);
+            var query = _context.Lugares.AsNoTracking().Include(l => l.Reservas).AsQueryable();
+            if (filtro.HasValue)
+            {
+                query = query.Where(l => l.Numero == filtro.Value);
+            }
+            return await query.ToListAsync();
         }
 
+        [HttpGet("deleteds")]
+        public async Task<ActionResult<IEnumerable<Lugar>>> GetDeletedLugares([FromQuery] int? filtro = null)
+        {
+            var query = _context.Lugares.AsNoTracking().IgnoreQueryFilters().Where(l => l.IsDeleted).Include(l => l.Reservas).AsQueryable();
+            if (filtro.HasValue)
+            {
+                query = query.Where(l => l.Numero == filtro.Value);
+            }
+            return await query.ToListAsync();
+        }
+
+        // GET: api/Lugares/5
         [HttpGet("{id}")]
-        public IActionResult GetLugar(int id)
+        public async Task<ActionResult<Lugar>> GetLugar(int id)
         {
-            var lugar = _context.Lugares.FirstOrDefault(l => l.Id == id && !l.IsDeleted);
-            if (lugar == null) return NotFound();
-            return Ok(lugar);
+            var lugar = await _context.Lugares.AsNoTracking().Include(l => l.Reservas).FirstOrDefaultAsync(a => a.Id.Equals(id));
+
+            if (lugar == null)
+            {
+                return NotFound();
+            }
+
+            return lugar;
         }
 
-        [HttpPost]
-        public IActionResult CreateLugar([FromBody] Lugar lugar)
-        {
-            if (lugar == null) return BadRequest();
-            _context.Lugares.Add(lugar);
-            _context.SaveChanges();
-            return CreatedAtAction(nameof(GetLugar), new { id = lugar.Id }, lugar);
-        }
-
+        // PUT: api/Lugares/5
+        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPut("{id}")]
-        public IActionResult UpdateLugar(int id, [FromBody] Lugar lugar)
+        public async Task<IActionResult> PutLugar(int id, Lugar lugar)
         {
-            if (lugar == null || lugar.Id != id) return BadRequest();
-            var existing = _context.Lugares.Find(id);
-            if (existing == null) return NotFound();
+            if (id != lugar.Id)
+            {
+                return BadRequest();
+            }
 
-            existing.Numero = lugar.Numero;
+            _context.Entry(lugar).State = EntityState.Modified;
 
-            _context.Lugares.Update(existing);
-            _context.SaveChanges();
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                if (!LugarExists(id))
+                {
+                    return NotFound();
+                }
+                else
+                {
+                    throw;
+                }
+            }
+
             return NoContent();
         }
 
-        [HttpDelete("{id}")]
-        public IActionResult DeleteLugar(int id)
+        // POST: api/Lugares
+        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
+        [HttpPost]
+        public async Task<ActionResult<Lugar>> PostLugar(Lugar lugar)
         {
-            var lugar = _context.Lugares.Find(id);
-            if (lugar == null) return NotFound();
+            _context.Lugares.Add(lugar);
+            await _context.SaveChangesAsync();
+
+            return CreatedAtAction("GetLugar", new { id = lugar.Id }, lugar);
+        }
+
+        // DELETE: api/Lugares/5
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteLugar(int id)
+        {
+            var lugar = await _context.Lugares.FindAsync(id);
+            if (lugar == null)
+            {
+                return NotFound();
+            }
+
             lugar.IsDeleted = true;
-            _context.SaveChanges();
+            _context.Lugares.Update(lugar);
+            await _context.SaveChangesAsync();
+
             return NoContent();
+        }
+
+        [HttpPut("restore/{id}")]
+        public async Task<IActionResult> RestoreLugar(int id)
+        {
+            var lugar = await _context.Lugares.IgnoreQueryFilters().FirstOrDefaultAsync(a => a.Id.Equals(id));
+            if (lugar == null)
+            {
+                return NotFound();
+            }
+            lugar.IsDeleted = false;
+            _context.Lugares.Update(lugar);
+            await _context.SaveChangesAsync();
+            return NoContent();
+        }
+        private bool LugarExists(int id)
+        {
+            return _context.Lugares.Any(e => e.Id == id);
         }
     }
 }

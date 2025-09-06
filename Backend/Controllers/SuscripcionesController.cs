@@ -1,69 +1,124 @@
-﻿using Backend.DataContext;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Backend.DataContext;
 using Service.Models;
+using Microsoft.AspNetCore.Authorization;
 
 namespace Backend.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class SuscripcionesController : ControllerBase
     {
         private readonly ParkARContext _context;
+
         public SuscripcionesController(ParkARContext context)
         {
             _context = context;
         }
 
         [HttpGet]
-        public IActionResult GetSuscripciones()
+        public async Task<ActionResult<IEnumerable<Suscripcion>>> GetSuscripciones([FromQuery] int? usuarioId = null)
         {
-            var suscripciones = _context.Suscripciones.Where(s => !s.IsDeleted).ToList();
-            return Ok(suscripciones);
+            var query = _context.Suscripciones.AsNoTracking().Include(s => s.Usuario).Include(s => s.Plan).Include(s => s.Pagos).AsQueryable();
+            if (usuarioId.HasValue)
+            {
+                query = query.Where(s => s.UsuarioId == usuarioId.Value);
+            }
+            return await query.ToListAsync();
+        }
+
+        [HttpGet("deleteds")]
+        public async Task<ActionResult<IEnumerable<Suscripcion>>> GetDeletedSuscripciones([FromQuery] int? usuarioId = null)
+        {
+            var query = _context.Suscripciones.AsNoTracking().IgnoreQueryFilters().Where(s => s.IsDeleted).Include(s => s.Usuario).Include(s => s.Plan).Include(s => s.Pagos).AsQueryable();
+            if (usuarioId.HasValue)
+            {
+                query = query.Where(s => s.UsuarioId == usuarioId.Value);
+            }
+            return await query.ToListAsync();
         }
 
         [HttpGet("{id}")]
-        public IActionResult GetSuscripcion(int id)
+        public async Task<ActionResult<Suscripcion>> GetSuscripcion(int id)
         {
-            var suscripcion = _context.Suscripciones.FirstOrDefault(s => s.Id == id && !s.IsDeleted);
-            if (suscripcion == null) return NotFound();
-            return Ok(suscripcion);
-        }
-
-        [HttpPost]
-        public IActionResult CreateSuscripcion([FromBody] Suscripcion suscripcion)
-        {
-            if (suscripcion == null) return BadRequest();
-            _context.Suscripciones.Add(suscripcion);
-            _context.SaveChanges();
-            return CreatedAtAction(nameof(GetSuscripcion), new { id = suscripcion.Id }, suscripcion);
+            var suscripcion = await _context.Suscripciones.AsNoTracking().Include(s => s.Usuario).Include(s => s.Plan).Include(s => s.Pagos).FirstOrDefaultAsync(s => s.Id == id);
+            if (suscripcion == null)
+            {
+                return NotFound();
+            }
+            return suscripcion;
         }
 
         [HttpPut("{id}")]
-        public IActionResult UpdateSuscripcion(int id, [FromBody] Suscripcion suscripcion)
+        public async Task<IActionResult> PutSuscripcion(int id, Suscripcion suscripcion)
         {
-            if (suscripcion == null || suscripcion.Id != id) return BadRequest();
-            var existing = _context.Suscripciones.Find(id);
-            if (existing == null) return NotFound();
-
-            existing.PlanId = suscripcion.PlanId;
-            existing.UsuarioId = suscripcion.UsuarioId;
-            existing.FechaInicio = suscripcion.FechaInicio;
-            existing.FechaFin = suscripcion.FechaFin;
-            existing.Estado = suscripcion.Estado;
-
-            _context.Suscripciones.Update(existing);
-            _context.SaveChanges();
+            if (id != suscripcion.Id)
+            {
+                return BadRequest();
+            }
+            _context.Entry(suscripcion).State = EntityState.Modified;
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                if (!SuscripcionExists(id))
+                {
+                    return NotFound();
+                }
+                else
+                {
+                    throw;
+                }
+            }
             return NoContent();
         }
 
-        [HttpDelete("{id}")]
-        public IActionResult DeleteSuscripcion(int id)
+        [HttpPost]
+        public async Task<ActionResult<Suscripcion>> PostSuscripcion(Suscripcion suscripcion)
         {
-            var suscripcion = _context.Suscripciones.Find(id);
-            if (suscripcion == null) return NotFound();
+            _context.Suscripciones.Add(suscripcion);
+            await _context.SaveChangesAsync();
+            return CreatedAtAction("GetSuscripcion", new { id = suscripcion.Id }, suscripcion);
+        }
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteSuscripcion(int id)
+        {
+            var suscripcion = await _context.Suscripciones.FindAsync(id);
+            if (suscripcion == null)
+            {
+                return NotFound();
+            }
             suscripcion.IsDeleted = true;
-            _context.SaveChanges();
+            _context.Suscripciones.Update(suscripcion);
+            await _context.SaveChangesAsync();
             return NoContent();
+        }
+
+        [HttpPut("restore/{id}")]
+        public async Task<IActionResult> RestoreSuscripcion(int id)
+        {
+            var suscripcion = await _context.Suscripciones.IgnoreQueryFilters().FirstOrDefaultAsync(s => s.Id == id);
+            if (suscripcion == null)
+            {
+                return NotFound();
+            }
+            suscripcion.IsDeleted = false;
+            _context.Suscripciones.Update(suscripcion);
+            await _context.SaveChangesAsync();
+            return NoContent();
+        }
+
+        private bool SuscripcionExists(int id)
+        {
+            return _context.Suscripciones.Any(e => e.Id == id);
         }
     }
 }

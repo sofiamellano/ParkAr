@@ -1,70 +1,124 @@
-﻿using Backend.DataContext;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Backend.DataContext;
 using Service.Models;
+using Microsoft.AspNetCore.Authorization;
 
 namespace Backend.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class ReservasController : ControllerBase
     {
         private readonly ParkARContext _context;
+
         public ReservasController(ParkARContext context)
         {
             _context = context;
         }
 
         [HttpGet]
-        public IActionResult GetReservas()
+        public async Task<ActionResult<IEnumerable<Reserva>>> GetReservas([FromQuery] int? usuarioId = null)
         {
-            var reservas = _context.Reservas.Where(r => !r.IsDeleted).ToList();
-            return Ok(reservas);
+            var query = _context.Reservas.AsNoTracking().Include(r => r.Usuario).Include(r => r.Vehiculo).Include(r => r.Lugar).Include(r => r.Pagos).AsQueryable();
+            if (usuarioId.HasValue)
+            {
+                query = query.Where(r => r.UsuarioId == usuarioId.Value);
+            }
+            return await query.ToListAsync();
+        }
+
+        [HttpGet("deleteds")]
+        public async Task<ActionResult<IEnumerable<Reserva>>> GetDeletedReservas([FromQuery] int? usuarioId = null)
+        {
+            var query = _context.Reservas.AsNoTracking().IgnoreQueryFilters().Where(r => r.IsDeleted).Include(r => r.Usuario).Include(r => r.Vehiculo).Include(r => r.Lugar).Include(r => r.Pagos).AsQueryable();
+            if (usuarioId.HasValue)
+            {
+                query = query.Where(r => r.UsuarioId == usuarioId.Value);
+            }
+            return await query.ToListAsync();
         }
 
         [HttpGet("{id}")]
-        public IActionResult GetReserva(int id)
+        public async Task<ActionResult<Reserva>> GetReserva(int id)
         {
-            var reserva = _context.Reservas.FirstOrDefault(r => r.Id == id && !r.IsDeleted);
-            if (reserva == null) return NotFound();
-            return Ok(reserva);
-        }
-
-        [HttpPost]
-        public IActionResult CreateReserva([FromBody] Reserva reserva)
-        {
-            if (reserva == null) return BadRequest();
-            _context.Reservas.Add(reserva);
-            _context.SaveChanges();
-            return CreatedAtAction(nameof(GetReserva), new { id = reserva.Id }, reserva);
+            var reserva = await _context.Reservas.AsNoTracking().Include(r => r.Usuario).Include(r => r.Vehiculo).Include(r => r.Lugar).Include(r => r.Pagos).FirstOrDefaultAsync(r => r.Id == id);
+            if (reserva == null)
+            {
+                return NotFound();
+            }
+            return reserva;
         }
 
         [HttpPut("{id}")]
-        public IActionResult UpdateReserva(int id, [FromBody] Reserva reserva)
+        public async Task<IActionResult> PutReserva(int id, Reserva reserva)
         {
-            if (reserva == null || reserva.Id != id) return BadRequest();
-            var existing = _context.Reservas.Find(id);
-            if (existing == null) return NotFound();
-
-            existing.UsuarioId = reserva.UsuarioId;
-            existing.VehiculoId = reserva.VehiculoId;
-            existing.LugarId = reserva.LugarId;
-            existing.FechaInicio = reserva.FechaInicio;
-            existing.FechaFin = reserva.FechaFin;
-            existing.EstadoReserva = reserva.EstadoReserva;
-
-            _context.Reservas.Update(existing);
-            _context.SaveChanges();
+            if (id != reserva.Id)
+            {
+                return BadRequest();
+            }
+            _context.Entry(reserva).State = EntityState.Modified;
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                if (!ReservaExists(id))
+                {
+                    return NotFound();
+                }
+                else
+                {
+                    throw;
+                }
+            }
             return NoContent();
         }
 
-        [HttpDelete("{id}")]
-        public IActionResult DeleteReserva(int id)
+        [HttpPost]
+        public async Task<ActionResult<Reserva>> PostReserva(Reserva reserva)
         {
-            var reserva = _context.Reservas.Find(id);
-            if (reserva == null) return NotFound();
+            _context.Reservas.Add(reserva);
+            await _context.SaveChangesAsync();
+            return CreatedAtAction("GetReserva", new { id = reserva.Id }, reserva);
+        }
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteReserva(int id)
+        {
+            var reserva = await _context.Reservas.FindAsync(id);
+            if (reserva == null)
+            {
+                return NotFound();
+            }
             reserva.IsDeleted = true;
-            _context.SaveChanges();
+            _context.Reservas.Update(reserva);
+            await _context.SaveChangesAsync();
             return NoContent();
+        }
+
+        [HttpPut("restore/{id}")]
+        public async Task<IActionResult> RestoreReserva(int id)
+        {
+            var reserva = await _context.Reservas.IgnoreQueryFilters().FirstOrDefaultAsync(r => r.Id == id);
+            if (reserva == null)
+            {
+                return NotFound();
+            }
+            reserva.IsDeleted = false;
+            _context.Reservas.Update(reserva);
+            await _context.SaveChangesAsync();
+            return NoContent();
+        }
+
+        private bool ReservaExists(int id)
+        {
+            return _context.Reservas.Any(e => e.Id == id);
         }
     }
 }

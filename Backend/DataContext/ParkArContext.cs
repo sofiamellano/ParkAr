@@ -17,6 +17,8 @@ namespace Backend.DataContext
         public DbSet<Suscripcion> Suscripciones { get; set; }
         public DbSet<Reserva> Reservas { get; set; }
         public DbSet<Pago> Pagos { get; set; }
+        public DbSet<Configuracion> Configuraciones { get; set; }
+
 
         public ParkARContext() { }
         public ParkARContext(DbContextOptions<ParkARContext> options) : base(options) { }
@@ -34,7 +36,13 @@ namespace Backend.DataContext
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            base.OnModelCreating(modelBuilder);
+            #region Datos Semilla
+            // =============================
+            // CONFIGURACIONES
+            // =============================
+            modelBuilder.Entity<Configuracion>().HasData(
+                new Configuracion{Id = 1, NombreEmpresa = "ParkAR", Direccion = "Av. Siempre Viva 123", Telefono = "341-555-1234", Email = "contacto@parkar.com", Cuit = "30-12345678-9", HorarioApertura = new TimeSpan(8, 0, 0), HorarioCierre = new TimeSpan(22, 0, 0), PrecioHora = 150.00m, IsDeleted = false}
+            );
 
             // =============================
             // USUARIOS
@@ -91,6 +99,17 @@ namespace Backend.DataContext
                 new Pago { Id = 1, UsuarioId = 1, ReservaId = 1, SuscripcionId = null, Monto = 600.00m, Metodo = MetodoPagoEnum.Tarjeta, Fecha = DateTime.Parse("2025-08-25 12:05"), Concepto = ConceptoPagoEnum.Reserva, IsDeleted = false },
                 new Pago { Id = 2, UsuarioId = 1, ReservaId = null, SuscripcionId = 1, Monto = 5000.00m, Metodo = MetodoPagoEnum.App, Fecha = DateTime.Parse("2025-08-01 08:00"), Concepto = ConceptoPagoEnum.Suscripcion, IsDeleted = false }
             );
+            #endregion
+
+            //configuramos los query filters para el borrado lógico
+            modelBuilder.Entity<Usuario>().HasQueryFilter(u => !u.IsDeleted);
+            modelBuilder.Entity<Vehiculo>().HasQueryFilter(v => !v.IsDeleted);
+            modelBuilder.Entity<Lugar>().HasQueryFilter(l => !l.IsDeleted);
+            modelBuilder.Entity<Plan>().HasQueryFilter(p => !p.IsDeleted);
+            modelBuilder.Entity<Suscripcion>().HasQueryFilter(s => !s.IsDeleted);
+            modelBuilder.Entity<Reserva>().HasQueryFilter(r => !r.IsDeleted);
+            modelBuilder.Entity<Pago>().HasQueryFilter(p => !p.IsDeleted);
+            modelBuilder.Entity<Configuracion>().HasQueryFilter(c => !c.IsDeleted);
         }
     }
 }

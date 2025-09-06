@@ -22,6 +22,66 @@ namespace Backend.Migrations
 
             MySqlModelBuilderExtensions.AutoIncrementColumns(modelBuilder);
 
+            modelBuilder.Entity("Service.Models.Configuracion", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Cuit")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("Direccion")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<TimeSpan>("HorarioApertura")
+                        .HasColumnType("time(6)");
+
+                    b.Property<TimeSpan>("HorarioCierre")
+                        .HasColumnType("time(6)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<string>("NombreEmpresa")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<decimal>("PrecioHora")
+                        .HasColumnType("decimal(65,30)");
+
+                    b.Property<string>("Telefono")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Configuraciones");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Cuit = "30-12345678-9",
+                            Direccion = "Av. Siempre Viva 123",
+                            Email = "contacto@parkar.com",
+                            HorarioApertura = new TimeSpan(0, 8, 0, 0, 0),
+                            HorarioCierre = new TimeSpan(0, 22, 0, 0, 0),
+                            IsDeleted = false,
+                            NombreEmpresa = "ParkAR",
+                            PrecioHora = 150.00m,
+                            Telefono = "341-555-1234"
+                        });
+                });
+
             modelBuilder.Entity("Service.Models.Lugar", b =>
                 {
                     b.Property<int>("Id")

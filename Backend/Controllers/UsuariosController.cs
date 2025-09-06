@@ -1,83 +1,124 @@
-﻿using Backend.DataContext;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Backend.DataContext;
 using Service.Models;
+using Microsoft.AspNetCore.Authorization;
 
 namespace Backend.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class UsuariosController : ControllerBase
     {
         private readonly ParkARContext _context;
+
         public UsuariosController(ParkARContext context)
         {
             _context = context;
         }
 
         [HttpGet]
-        public IActionResult GetUsuarios()
+        public async Task<ActionResult<IEnumerable<Usuario>>> GetUsuarios([FromQuery] string? filtro = null)
         {
-            var usuarios = _context.Usuarios.Where(u => !u.IsDeleted).ToList();
-            return Ok(usuarios);
+            var query = _context.Usuarios.AsNoTracking().Include(u => u.Vehiculos).Include(u => u.Suscripciones).Include(u => u.Reservas).Include(u => u.Pagos).AsQueryable();
+            if (!string.IsNullOrEmpty(filtro))
+            {
+                query = query.Where(u => u.Nombre.Contains(filtro) || u.Email.Contains(filtro));
+            }
+            return await query.ToListAsync();
+        }
+
+        [HttpGet("deleteds")]
+        public async Task<ActionResult<IEnumerable<Usuario>>> GetDeletedUsuarios([FromQuery] string? filtro = null)
+        {
+            var query = _context.Usuarios.AsNoTracking().IgnoreQueryFilters().Where(u => u.IsDeleted).Include(u => u.Vehiculos).Include(u => u.Suscripciones).Include(u => u.Reservas).Include(u => u.Pagos).AsQueryable();
+            if (!string.IsNullOrEmpty(filtro))
+            {
+                query = query.Where(u => u.Nombre.Contains(filtro) || u.Email.Contains(filtro));
+            }
+            return await query.ToListAsync();
         }
 
         [HttpGet("{id}")]
-        public IActionResult GetUsuario(int id)
+        public async Task<ActionResult<Usuario>> GetUsuario(int id)
         {
-            var usuario = _context.Usuarios.FirstOrDefault(u => u.Id == id && !u.IsDeleted);
+            var usuario = await _context.Usuarios.AsNoTracking().Include(u => u.Vehiculos).Include(u => u.Suscripciones).Include(u => u.Reservas).Include(u => u.Pagos).FirstOrDefaultAsync(u => u.Id == id);
             if (usuario == null)
             {
                 return NotFound();
             }
-            return Ok(usuario);
-        }
-
-        [HttpPost]
-        public IActionResult CreateUsuario([FromBody] Usuario usuario)
-        {
-            if (usuario == null)
-            {
-                return BadRequest();
-            }
-            _context.Usuarios.Add(usuario);
-            _context.SaveChanges();
-            return CreatedAtAction(nameof(GetUsuario), new { id = usuario.Id }, usuario);
+            return usuario;
         }
 
         [HttpPut("{id}")]
-        public IActionResult UpdateUsuario(int id, [FromBody] Usuario usuario)
+        public async Task<IActionResult> PutUsuario(int id, Usuario usuario)
         {
-            if (usuario == null || usuario.Id != id)
+            if (id != usuario.Id)
             {
                 return BadRequest();
             }
-            var existingUsuario = _context.Usuarios.Find(id);
-            if (existingUsuario == null || existingUsuario.IsDeleted)
+            _context.Entry(usuario).State = EntityState.Modified;
+            try
             {
-                return NotFound();
+                await _context.SaveChangesAsync();
             }
-
-            existingUsuario.Nombre = usuario.Nombre;
-            existingUsuario.Email = usuario.Email;
-            existingUsuario.Password = usuario.Password;
-            existingUsuario.TipoUsuario = usuario.TipoUsuario;
-
-            _context.Usuarios.Update(existingUsuario);
-            _context.SaveChanges();
+            catch (DbUpdateConcurrencyException)
+            {
+                if (!UsuarioExists(id))
+                {
+                    return NotFound();
+                }
+                else
+                {
+                    throw;
+                }
+            }
             return NoContent();
         }
 
-        [HttpDelete("{id}")]
-        public IActionResult DeleteUsuario(int id)
+        [HttpPost]
+        public async Task<ActionResult<Usuario>> PostUsuario(Usuario usuario)
         {
-            var usuario = _context.Usuarios.Find(id);
-            if (usuario == null || usuario.IsDeleted)
+            _context.Usuarios.Add(usuario);
+            await _context.SaveChangesAsync();
+            return CreatedAtAction("GetUsuario", new { id = usuario.Id }, usuario);
+        }
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteUsuario(int id)
+        {
+            var usuario = await _context.Usuarios.FindAsync(id);
+            if (usuario == null)
             {
                 return NotFound();
             }
-            usuario.IsDeleted = true; // Soft delete
-            _context.SaveChanges();
+            usuario.IsDeleted = true;
+            _context.Usuarios.Update(usuario);
+            await _context.SaveChangesAsync();
             return NoContent();
+        }
+
+        [HttpPut("restore/{id}")]
+        public async Task<IActionResult> RestoreUsuario(int id)
+        {
+            var usuario = await _context.Usuarios.IgnoreQueryFilters().FirstOrDefaultAsync(u => u.Id == id);
+            if (usuario == null)
+            {
+                return NotFound();
+            }
+            usuario.IsDeleted = false;
+            _context.Usuarios.Update(usuario);
+            await _context.SaveChangesAsync();
+            return NoContent();
+        }
+
+        private bool UsuarioExists(int id)
+        {
+            return _context.Usuarios.Any(e => e.Id == id);
         }
     }
 }

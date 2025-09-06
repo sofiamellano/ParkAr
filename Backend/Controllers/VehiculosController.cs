@@ -1,67 +1,124 @@
-﻿using Backend.DataContext;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Backend.DataContext;
 using Service.Models;
+using Microsoft.AspNetCore.Authorization;
 
 namespace Backend.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class VehiculosController : ControllerBase
     {
         private readonly ParkARContext _context;
+
         public VehiculosController(ParkARContext context)
         {
             _context = context;
         }
 
         [HttpGet]
-        public IActionResult GetVehiculos()
+        public async Task<ActionResult<IEnumerable<Vehiculo>>> GetVehiculos([FromQuery] string? filtro = null)
         {
-            var vehiculos = _context.Vehiculos.Where(v => !v.IsDeleted).ToList();
-            return Ok(vehiculos);
+            var query = _context.Vehiculos.AsNoTracking().Include(v => v.Usuario).Include(v => v.Reservas).AsQueryable();
+            if (!string.IsNullOrEmpty(filtro))
+            {
+                query = query.Where(v => v.Patente.Contains(filtro));
+            }
+            return await query.ToListAsync();
+        }
+
+        [HttpGet("deleteds")]
+        public async Task<ActionResult<IEnumerable<Vehiculo>>> GetDeletedVehiculos([FromQuery] string? filtro = null)
+        {
+            var query = _context.Vehiculos.AsNoTracking().IgnoreQueryFilters().Where(v => v.IsDeleted).Include(v => v.Usuario).Include(v => v.Reservas).AsQueryable();
+            if (!string.IsNullOrEmpty(filtro))
+            {
+                query = query.Where(v => v.Patente.Contains(filtro));
+            }
+            return await query.ToListAsync();
         }
 
         [HttpGet("{id}")]
-        public IActionResult GetVehiculo(int id)
+        public async Task<ActionResult<Vehiculo>> GetVehiculo(int id)
         {
-            var vehiculo = _context.Vehiculos.FirstOrDefault(v => v.Id == id && !v.IsDeleted);
-            if (vehiculo == null) return NotFound();
-            return Ok(vehiculo);
-        }
-
-        [HttpPost]
-        public IActionResult CreateVehiculo([FromBody] Vehiculo vehiculo)
-        {
-            if (vehiculo == null) return BadRequest();
-            _context.Vehiculos.Add(vehiculo);
-            _context.SaveChanges();
-            return CreatedAtAction(nameof(GetVehiculo), new { id = vehiculo.Id }, vehiculo);
+            var vehiculo = await _context.Vehiculos.AsNoTracking().Include(v => v.Usuario).Include(v => v.Reservas).FirstOrDefaultAsync(v => v.Id == id);
+            if (vehiculo == null)
+            {
+                return NotFound();
+            }
+            return vehiculo;
         }
 
         [HttpPut("{id}")]
-        public IActionResult UpdateVehiculo(int id, [FromBody] Vehiculo vehiculo)
+        public async Task<IActionResult> PutVehiculo(int id, Vehiculo vehiculo)
         {
-            if (vehiculo == null || vehiculo.Id != id) return BadRequest();
-            var existing = _context.Vehiculos.Find(id);
-            if (existing == null) return NotFound();
-
-            existing.Patente = vehiculo.Patente;
-            existing.TipoVehiculo = vehiculo.TipoVehiculo;
-            existing.UsuarioId = vehiculo.UsuarioId;
-
-            _context.Vehiculos.Update(existing);
-            _context.SaveChanges();
+            if (id != vehiculo.Id)
+            {
+                return BadRequest();
+            }
+            _context.Entry(vehiculo).State = EntityState.Modified;
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                if (!VehiculoExists(id))
+                {
+                    return NotFound();
+                }
+                else
+                {
+                    throw;
+                }
+            }
             return NoContent();
         }
 
-        [HttpDelete("{id}")]
-        public IActionResult DeleteVehiculo(int id)
+        [HttpPost]
+        public async Task<ActionResult<Vehiculo>> PostVehiculo(Vehiculo vehiculo)
         {
-            var vehiculo = _context.Vehiculos.Find(id);
-            if (vehiculo == null) return NotFound();
-            vehiculo.IsDeleted = true; // Soft delete
-            _context.SaveChanges();
+            _context.Vehiculos.Add(vehiculo);
+            await _context.SaveChangesAsync();
+            return CreatedAtAction("GetVehiculo", new { id = vehiculo.Id }, vehiculo);
+        }
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteVehiculo(int id)
+        {
+            var vehiculo = await _context.Vehiculos.FindAsync(id);
+            if (vehiculo == null)
+            {
+                return NotFound();
+            }
+            vehiculo.IsDeleted = true;
+            _context.Vehiculos.Update(vehiculo);
+            await _context.SaveChangesAsync();
             return NoContent();
+        }
+
+        [HttpPut("restore/{id}")]
+        public async Task<IActionResult> RestoreVehiculo(int id)
+        {
+            var vehiculo = await _context.Vehiculos.IgnoreQueryFilters().FirstOrDefaultAsync(v => v.Id == id);
+            if (vehiculo == null)
+            {
+                return NotFound();
+            }
+            vehiculo.IsDeleted = false;
+            _context.Vehiculos.Update(vehiculo);
+            await _context.SaveChangesAsync();
+            return NoContent();
+        }
+
+        private bool VehiculoExists(int id)
+        {
+            return _context.Vehiculos.Any(e => e.Id == id);
         }
     }
 }
