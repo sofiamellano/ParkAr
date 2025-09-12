@@ -1,0 +1,260 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="AppMovil.Pages.RegisterPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:viewmodels="clr-namespace:AppMovil.ViewModels"
+    Title="{Binding Title}"
+    Shell.NavBarIsVisible="False"
+    BackgroundColor="#F8F9FA"
+    x:DataType="viewmodels:RegisterPageViewModel">
+
+    <ScrollView>
+        <Grid Padding="20" RowSpacing="0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <!-- Header Section -->
+            <StackLayout Grid.Row="0" Spacing="10" Margin="0,40,0,30">
+                <!-- Logo/Icon -->
+                <Frame BackgroundColor="#4A90E2" 
+                       CornerRadius="35" 
+                       WidthRequest="70" 
+                       HeightRequest="70" 
+                       HorizontalOptions="Center"
+                       HasShadow="True"
+                       Padding="0">
+                    <Label Text="P" 
+                           FontSize="30" 
+                           FontAttributes="Bold" 
+                           TextColor="White" 
+                           HorizontalOptions="Center" 
+                           VerticalOptions="Center" />
+                </Frame>
+
+                <!-- Title -->
+                <Label Text="Crear Cuenta" 
+                       FontSize="32" 
+                       FontAttributes="Bold" 
+                       TextColor="#2C3E50"
+                       HorizontalOptions="Center" />
+
+                <!-- Subtitle -->
+                <Label Text="Completa tus datos para comenzar" 
+                       FontSize="16" 
+                       TextColor="#7F8C8D"
+                       HorizontalOptions="Center"
+                       Margin="0,5,0,0" />
+            </StackLayout>
+
+            <!-- Form Section -->
+            <StackLayout Grid.Row="1" Spacing="16">
+                
+                <!-- Full Name Input -->
+                <StackLayout Spacing="8">
+                    <Label Text="Nombre Completo" 
+                           FontSize="14" 
+                           FontAttributes="Bold"
+                           TextColor="#2C3E50"
+                           Margin="10,0,0,0" />
+                    <Frame BackgroundColor="White" 
+                           BorderColor="#E1E8ED" 
+                           CornerRadius="12"
+                           HasShadow="False"
+                           Padding="0">
+                        <Entry Text="{Binding FullName}"
+                               Placeholder="Ingresa tu nombre completo"
+                               FontSize="16"
+                               TextColor="#2C3E50"
+                               PlaceholderColor="#95A5A6"
+                               ClearButtonVisibility="WhileEditing"
+                               Margin="15,10" />
+                    </Frame>
+                </StackLayout>
+
+                <!-- Email Input -->
+                <StackLayout Spacing="8">
+                    <Label Text="Correo Electronico" 
+                           FontSize="14" 
+                           FontAttributes="Bold"
+                           TextColor="#2C3E50"
+                           Margin="10,0,0,0" />
+                    <Frame BackgroundColor="White" 
+                           BorderColor="#E1E8ED" 
+                           CornerRadius="12"
+                           HasShadow="False"
+                           Padding="0">
+                        <Entry Text="{Binding Email}"
+                               Placeholder="ejemplo@correo.com"
+                               Keyboard="Email"
+                               FontSize="16"
+                               TextColor="#2C3E50"
+                               PlaceholderColor="#95A5A6"
+                               ClearButtonVisibility="WhileEditing"
+                               Margin="15,10" />
+                    </Frame>
+                </StackLayout>
+
+                <!-- Phone Input -->
+                <StackLayout Spacing="8">
+                    <Label Text="Telefono (Opcional)" 
+                           FontSize="14" 
+                           FontAttributes="Bold"
+                           TextColor="#2C3E50"
+                           Margin="10,0,0,0" />
+                    <Frame BackgroundColor="White" 
+                           BorderColor="#E1E8ED" 
+                           CornerRadius="12"
+                           HasShadow="False"
+                           Padding="0">
+                        <Entry Text="{Binding PhoneNumber}"
+                               Placeholder="+54 9 11 1234-5678"
+                               Keyboard="Telephone"
+                               FontSize="16"
+                               TextColor="#2C3E50"
+                               PlaceholderColor="#95A5A6"
+                               ClearButtonVisibility="WhileEditing"
+                               Margin="15,10" />
+                    </Frame>
+                </StackLayout>
+
+                <!-- Password Input -->
+                <StackLayout Spacing="8">
+                    <Label Text="Contrasena" 
+                           FontSize="14" 
+                           FontAttributes="Bold"
+                           TextColor="#2C3E50"
+                           Margin="10,0,0,0" />
+                    <Frame BackgroundColor="White" 
+                           BorderColor="#E1E8ED" 
+                           CornerRadius="12"
+                           HasShadow="False"
+                           Padding="0">
+                        <Entry Text="{Binding Password}"
+                               Placeholder="Minimo 6 caracteres"
+                               IsPassword="True"
+                               FontSize="16"
+                               TextColor="#2C3E50"
+                               PlaceholderColor="#95A5A6"
+                               ClearButtonVisibility="WhileEditing"
+                               Margin="15,10" />
+                    </Frame>
+                </StackLayout>
+
+                <!-- Confirm Password Input -->
+                <StackLayout Spacing="8">
+                    <Label Text="Confirmar Contrasena" 
+                           FontSize="14" 
+                           FontAttributes="Bold"
+                           TextColor="#2C3E50"
+                           Margin="10,0,0,0" />
+                    <Frame BackgroundColor="White" 
+                           BorderColor="#E1E8ED" 
+                           CornerRadius="12"
+                           HasShadow="False"
+                           Padding="0">
+                        <Entry Text="{Binding ConfirmPassword}"
+                               Placeholder="Repite tu contrasena"
+                               IsPassword="True"
+                               FontSize="16"
+                               TextColor="#2C3E50"
+                               PlaceholderColor="#95A5A6"
+                               ClearButtonVisibility="WhileEditing"
+                               Margin="15,10" />
+                    </Frame>
+                </StackLayout>
+
+                <!-- Register Button -->
+                <Frame BackgroundColor="#4A90E2"
+                       CornerRadius="12"
+                       HasShadow="True"
+                       Margin="0,25,0,10"
+                       Padding="0">
+                    <Button Text="Crear Mi Cuenta"
+                            Command="{Binding RegisterCommand}"
+                            FontSize="18"
+                            FontAttributes="Bold"
+                            TextColor="White"
+                            BackgroundColor="Transparent"
+                            HeightRequest="55"
+                            BorderWidth="0" />
+                </Frame>
+
+                <!-- Loading Indicator -->
+                <StackLayout IsVisible="{Binding IsBusy}" 
+                           HorizontalOptions="Center" 
+                           Orientation="Horizontal"
+                           Spacing="10"
+                           Margin="0,10,0,0">
+                    <ActivityIndicator IsRunning="{Binding IsBusy}" 
+                                     Color="#4A90E2" 
+                                     WidthRequest="20" 
+                                     HeightRequest="20" />
+                    <Label Text="Creando cuenta..." 
+                           FontSize="14" 
+                           TextColor="#4A90E2" 
+                           VerticalOptions="Center" />
+                </StackLayout>
+
+            </StackLayout>
+
+            <!-- Footer Section -->
+            <StackLayout Grid.Row="2" 
+                        Spacing="15" 
+                        Margin="0,20,0,30">
+                
+                <!-- Divider -->
+                <StackLayout Orientation="Horizontal" 
+                           HorizontalOptions="FillAndExpand" 
+                           VerticalOptions="Center"
+                           Spacing="10"
+                           Margin="0,10,0,10">
+                    <BoxView BackgroundColor="#E1E8ED" 
+                            HeightRequest="1" 
+                            HorizontalOptions="FillAndExpand" 
+                            VerticalOptions="Center" />
+                    <Label Text="o" 
+                          FontSize="14" 
+                          TextColor="#95A5A6" 
+                          VerticalOptions="Center" />
+                    <BoxView BackgroundColor="#E1E8ED" 
+                            HeightRequest="1" 
+                            HorizontalOptions="FillAndExpand" 
+                            VerticalOptions="Center" />
+                </StackLayout>
+
+                <!-- Login Link -->
+                <StackLayout Orientation="Horizontal" 
+                           HorizontalOptions="Center" 
+                           Spacing="5">
+                    <Label Text="Ya tienes una cuenta?" 
+                           FontSize="15" 
+                           TextColor="#7F8C8D" 
+                           VerticalOptions="Center" />
+                    <Button Text="Iniciar Sesion" 
+                            Command="{Binding GoToLoginCommand}"
+                            BackgroundColor="Transparent"
+                            TextColor="#4A90E2"
+                            FontSize="15"
+                            FontAttributes="Bold"
+                            Padding="5,0"
+                            BorderWidth="0" />
+                </StackLayout>
+
+                <!-- Terms and Privacy -->
+                <Label Text="Al crear una cuenta, aceptas nuestros Terminos y Condiciones y Politica de Privacidad"
+                       HorizontalOptions="Center" 
+                       HorizontalTextAlignment="Center"
+                       FontSize="12"
+                       TextColor="#95A5A6"
+                       Margin="20,10,20,0" />
+
+            </StackLayout>
+
+        </Grid>
+    </ScrollView>
+
+</ContentPage>

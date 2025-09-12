@@ -20,7 +20,7 @@ namespace Service.Services
         {
             _httpClient = httpClient ?? new HttpClient();
             _options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-            _endpoint = Properties.Resources.UrlApiLocal + ApiEndpoints.GetEndpoint(typeof(T).Name);
+            _endpoint = Properties.Resources.UrlApi + ApiEndpoints.GetEndpoint(typeof(T).Name);
 
             if (!string.IsNullOrEmpty(GenericService<object>.jwtToken))
                 _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", GenericService<object>.jwtToken);

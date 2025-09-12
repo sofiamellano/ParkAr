@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="AppMovil.Pages.PerfilPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:viewmodels="clr-namespace:AppMovil.ViewModels"
+    Title="{Binding Title}"
+    x:DataType="viewmodels:PerfilPageViewModel">
+
+    <ScrollView>
+        <StackLayout Padding="20" Spacing="20">
+
+            <Frame BackgroundColor="Blue" BorderColor="Transparent" CornerRadius="15" Padding="20">
+                <StackLayout Spacing="10">
+                    <Label Text="Usuario" FontSize="48" HorizontalOptions="Center" TextColor="White" />
+                    <Label 
+                        Text="{Binding NombreUsuario}" 
+                        FontSize="20" 
+                        FontAttributes="Bold" 
+                        TextColor="White"
+                        HorizontalOptions="Center" />
+                    <Label 
+                        Text="{Binding EmailUsuario}" 
+                        FontSize="14" 
+                        TextColor="White"
+                        HorizontalOptions="Center" />
+                </StackLayout>
+            </Frame>
+
+            <StackLayout x:Name="LoginSection" Spacing="10" IsVisible="{Binding IsLoggedIn, Converter={StaticResource InvertedBoolConverter}}">
+                <Label Text="Acceso" FontSize="18" FontAttributes="Bold" />
+                
+                <Button 
+                    Text="Iniciar Sesion"
+                    Command="{Binding GoToLoginCommand}"
+                    BackgroundColor="Green"
+                    TextColor="White"
+                    CornerRadius="8"
+                    HeightRequest="50" />
+
+                <Button 
+                    Text="Registrarse"
+                    Command="{Binding GoToRegisterCommand}"
+                    BackgroundColor="Blue"
+                    TextColor="White"
+                    CornerRadius="8"
+                    HeightRequest="50" />
+            </StackLayout>
+
+            <StackLayout Spacing="15">
+                <Label Text="Mi Cuenta" FontSize="18" FontAttributes="Bold" />
+
+                <Frame BackgroundColor="White" BorderColor="LightGray" CornerRadius="10" HasShadow="True" Padding="0">
+                    <StackLayout Spacing="0">
+                        <Button 
+                            Text="Editar Perfil"
+                            Command="{Binding EditProfileCommand}"
+                            BackgroundColor="Transparent"
+                            TextColor="Black"
+                            BorderWidth="0"
+                            HorizontalOptions="FillAndExpand"
+                            HeightRequest="50" />
+                        
+                        <BoxView BackgroundColor="LightGray" HeightRequest="1" />
+                        
+                        <Button 
+                            Text="Cambiar Contrasena"
+                            Command="{Binding ChangePasswordCommand}"
+                            BackgroundColor="Transparent"
+                            TextColor="Black"
+                            BorderWidth="0"
+                            HorizontalOptions="FillAndExpand"
+                            HeightRequest="50" />
+                    </StackLayout>
+                </Frame>
+
+                <Frame BackgroundColor="White" BorderColor="LightGray" CornerRadius="10" HasShadow="True" Padding="0">
+                    <Button 
+                        Text="Ver Mis Tickets"
+                        Command="{Binding GoToTicketCommand}"
+                        BackgroundColor="Transparent"
+                        TextColor="Black"
+                        BorderWidth="0"
+                        HorizontalOptions="FillAndExpand"
+                        HeightRequest="50" />
+                </Frame>
+
+                <Frame BackgroundColor="White" BorderColor="LightGray" CornerRadius="10" HasShadow="True" Padding="0">
+                    <StackLayout Spacing="0">
+                        <Button 
+                            Text="Configuracion"
+                            Command="{Binding ShowSettingsCommand}"
+                            BackgroundColor="Transparent"
+                            TextColor="Black"
+                            BorderWidth="0"
+                            HorizontalOptions="FillAndExpand"
+                            HeightRequest="50" />
+                        
+                        <BoxView BackgroundColor="LightGray" HeightRequest="1" />
+                        
+                        <Button 
+                            Text="Ayuda y Soporte"
+                            Command="{Binding ShowHelpCommand}"
+                            BackgroundColor="Transparent"
+                            TextColor="Black"
+                            BorderWidth="0"
+                            HorizontalOptions="FillAndExpand"
+                            HeightRequest="50" />
+                    </StackLayout>
+                </Frame>
+
+                <Button 
+                    Text="Cerrar Sesion"
+                    Command="{Binding LogoutCommand}"
+                    BackgroundColor="Red"
+                    TextColor="White"
+                    CornerRadius="8"
+                    HeightRequest="50"
+                    Margin="0,20,0,0" />
+            </StackLayout>
+
+        </StackLayout>
+    </ScrollView>
+
+</ContentPage>

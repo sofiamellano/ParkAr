@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="AppMovil.Pages.HistorialPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:viewmodels="clr-namespace:AppMovil.ViewModels"
+    Title="{Binding Title}"
+    x:DataType="viewmodels:HistorialPageViewModel">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <StackLayout Grid.Row="0" Orientation="Horizontal" BackgroundColor="LightGray" Margin="0">
+            <Button 
+                Text="Reservas"
+                Command="{Binding SelectReservasTabCommand}"
+                BackgroundColor="{Binding IsReservasTabSelected, Converter={StaticResource BoolToColorConverter}}"
+                TextColor="Black"
+                CornerRadius="0"
+                HorizontalOptions="FillAndExpand" />
+            
+            <Button 
+                Text="Pagos"
+                Command="{Binding SelectPagosTabCommand}"
+                BackgroundColor="{Binding IsPagosTabSelected, Converter={StaticResource BoolToColorConverter}}"
+                TextColor="Black"
+                CornerRadius="0"
+                HorizontalOptions="FillAndExpand" />
+        </StackLayout>
+
+        <ScrollView Grid.Row="1">
+            <StackLayout Padding="20">
+
+                <StackLayout IsVisible="{Binding IsReservasTabSelected}">
+                    <Label Text="Historial de Reservas" FontSize="18" FontAttributes="Bold" Margin="0,0,0,10" />
+                    
+                    <CollectionView ItemsSource="{Binding HistorialReservas}">
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate x:DataType="viewmodels:HistorialItem">
+                                <Grid Padding="0,5">
+                                    <Frame BackgroundColor="White" BorderColor="LightGray" CornerRadius="8" HasShadow="True">
+                                        <StackLayout Spacing="8">
+                                            <Label Text="{Binding Titulo}" FontSize="16" FontAttributes="Bold" />
+                                            <Label Text="{Binding Fecha, StringFormat='{0:dd/MM/yyyy HH:mm}'}" FontSize="12" TextColor="Gray" />
+                                            <Label Text="{Binding Descripcion}" FontSize="14" />
+                                            <StackLayout Orientation="Horizontal">
+                                                <Label Text="Estado:" FontSize="12" />
+                                                <Label Text="{Binding Estado}" FontSize="12" FontAttributes="Bold" />
+                                                <Label Text="{Binding Monto}" FontSize="12" FontAttributes="Bold" HorizontalOptions="EndAndExpand" />
+                                            </StackLayout>
+                                            <Button 
+                                                Text="Ver Detalles" 
+                                                Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:HistorialPageViewModel}}, Path=ViewDetailsCommand}"
+                                                CommandParameter="{Binding .}"
+                                                BackgroundColor="Blue"
+                                                TextColor="White"
+                                                CornerRadius="5"
+                                                FontSize="12" />
+                                        </StackLayout>
+                                    </Frame>
+                                </Grid>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                </StackLayout>
+
+                <StackLayout IsVisible="{Binding IsPagosTabSelected}">
+                    <Label Text="Historial de Pagos" FontSize="18" FontAttributes="Bold" Margin="0,0,0,10" />
+                    
+                    <CollectionView ItemsSource="{Binding HistorialPagos}">
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate x:DataType="viewmodels:HistorialItem">
+                                <Grid Padding="0,5">
+                                    <Frame BackgroundColor="White" BorderColor="LightGray" CornerRadius="8" HasShadow="True">
+                                        <StackLayout Spacing="8">
+                                            <Label Text="{Binding Titulo}" FontSize="16" FontAttributes="Bold" />
+                                            <Label Text="{Binding Fecha, StringFormat='{0:dd/MM/yyyy HH:mm}'}" FontSize="12" TextColor="Gray" />
+                                            <Label Text="{Binding Descripcion}" FontSize="14" />
+                                            <StackLayout Orientation="Horizontal">
+                                                <Label Text="Estado:" FontSize="12" />
+                                                <Label Text="{Binding Estado}" FontSize="12" FontAttributes="Bold" />
+                                                <Label Text="{Binding Monto}" FontSize="12" FontAttributes="Bold" HorizontalOptions="EndAndExpand" />
+                                            </StackLayout>
+                                            <Button 
+                                                Text="Ver Detalles" 
+                                                Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:HistorialPageViewModel}}, Path=ViewDetailsCommand}"
+                                                CommandParameter="{Binding .}"
+                                                BackgroundColor="Blue"
+                                                TextColor="White"
+                                                CornerRadius="5"
+                                                FontSize="12" />
+                                        </StackLayout>
+                                    </Frame>
+                                </Grid>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                </StackLayout>
+
+            </StackLayout>
+        </ScrollView>
+    </Grid>
+
+</ContentPage>
