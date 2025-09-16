@@ -1,61 +1,92 @@
-using CommunityToolkit.Mvvm.ComponentModel;
+ï»¿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Service.DTOs;
 using Service.Interfaces;
+using Service.Services;
 
 namespace AppMovil.ViewModels;
 
 public partial class LoginPageViewModel : BaseViewModel
 {
-    private readonly IAuthService _authService;
+    AuthService _authService;
+    UsuarioService _usuarioService;
 
     [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(LoginCommand))]
     private string email = string.Empty;
 
     [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(LoginCommand))]
     private string password = string.Empty;
 
     [ObservableProperty]
     private bool isLoginEnabled = true;
 
-    public LoginPageViewModel(IAuthService authService)
+    public IRelayCommand LoginCommand { get; }
+    public IRelayCommand GoToRegisterCommand { get; }
+
+    public LoginPageViewModel()
     {
-        _authService = authService;
-        Title = "Iniciar Sesión";
+        _authService = new AuthService();
+        _usuarioService = new UsuarioService();
+        Title = "Iniciar SesiÃ³n";
+        LoginCommand = new AsyncRelayCommand(OnLogin, CanLogin);
+        GoToRegisterCommand = new AsyncRelayCommand(GoToRegister);
+    }
+    
+    private bool CanLogin()
+    {
+        return !IsBusy && 
+               !string.IsNullOrWhiteSpace(Email) && 
+               !string.IsNullOrWhiteSpace(Password) && 
+               IsLoginEnabled;
     }
 
-    [RelayCommand]
-    private async Task Login()
+    private async Task OnLogin()
     {
-        if (IsBusy) return;
-
-        if (string.IsNullOrWhiteSpace(Email) || string.IsNullOrWhiteSpace(Password))
-        {
-            await Application.Current.MainPage.DisplayAlert("Error", "Por favor ingrese email y contraseña", "OK");
-            return;
-        }
-
         try
         {
             IsBusy = true;
             IsLoginEnabled = false;
 
-            // Por ahora permite ingresar con cualquier cosa (sin validación real)
             var loginDto = new LoginDTO
             {
                 Username = Email,
                 Password = Password
             };
 
-            // Simular login exitoso
-            await Task.Delay(1000);
+            var loginResult = await _authService.Login(loginDto);
 
-            // Cambiar a AppShell después del login exitoso
-            Application.Current.MainPage = new AppShell();
+            if (loginResult)
+            {
+                var usuario = await _usuarioService.GetByEmailAsync(Email);
+
+                // âœ… Usar siempre el AppShell actual
+                if (Application.Current?.MainPage is AppShell shell)
+                {
+                    if (usuario != null)
+                        shell.SetUserLogin(usuario);
+                    else
+                        shell.SetLoginState(true);
+                }
+
+                // âœ… Navegar a la pestaÃ±a inicial (por ejemplo ReservasPage)
+                await Shell.Current.GoToAsync($"//ReservasPage");
+
+                // Limpiar campos despuÃ©s del login exitoso
+                Email = string.Empty;
+                Password = string.Empty;
+            }
+            else
+            {
+                await Application.Current.MainPage.DisplayAlert("Error",
+                    "Credenciales incorrectas. Verifique su email y contraseÃ±a.", "OK");
+            }
         }
         catch (Exception ex)
         {
-            await Application.Current.MainPage.DisplayAlert("Error", $"Error al iniciar sesión: {ex.Message}", "OK");
+            await Application.Current.MainPage.DisplayAlert("Error",
+                $"Error al iniciar sesiÃ³n: {ex.Message}", "OK");
         }
         finally
         {
@@ -64,11 +95,18 @@ public partial class LoginPageViewModel : BaseViewModel
         }
     }
 
-    [RelayCommand]
     private async Task GoToRegister()
     {
-        var registerViewModel = new RegisterPageViewModel();
-        var registerPage = new Pages.RegisterPage(registerViewModel);
-        await Application.Current.MainPage.Navigation.PushAsync(registerPage);
+        try
+        {
+            var registerViewModel = new RegisterPageViewModel();
+            var registerPage = new Pages.RegisterPage(registerViewModel);
+            await Application.Current.MainPage.Navigation.PushAsync(registerPage);
+        }
+        catch (Exception ex)
+        {
+            await Application.Current.MainPage.DisplayAlert("Error", 
+                $"Error al navegar: {ex.Message}", "OK");
+        }
     }
 }

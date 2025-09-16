@@ -23,5 +23,10 @@ namespace Service.Models
         public Usuario? Usuario { get; set; }
         public Reserva? Reserva { get; set; }
         public Suscripcion? Suscripcion { get; set; }
+
+        public override string ToString()
+        {
+            return $"Pago ${Monto:N2} - {Concepto} ({Metodo}) - {Fecha:dd/MM/yyyy}";
+        }
     }
 }

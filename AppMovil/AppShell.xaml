@@ -4,10 +4,37 @@
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:pages="clr-namespace:AppMovil.Pages"
+    xmlns:viewmodels="clr-namespace:AppMovil.ViewModels"
     Shell.FlyoutBehavior="Disabled"
-    Title="ParkAR Mobile">
+    Title="{Binding Title}"
+    x:DataType="viewmodels:AppShellViewModel">
 
-    <TabBar>
+    <!-- Header opcional para mostrar info del usuario -->
+    <Shell.FlyoutHeader>
+        <StackLayout IsVisible="{Binding ShowUserInfo}" 
+                     BackgroundColor="#4A90E2" 
+                     Padding="20,40,20,20" 
+                     Spacing="10">
+            <Label Text="{Binding WelcomeMessage}" 
+                   FontSize="18" 
+                   FontAttributes="Bold" 
+                   TextColor="White" />
+            <Label Text="{Binding CurrentUser.Email}" 
+                   FontSize="14" 
+                   TextColor="White" />
+            <Button Text="Cerrar Sesión" 
+                    Command="{Binding LogoutCommand}"
+                    BackgroundColor="Transparent"
+                    TextColor="White"
+                    BorderColor="White"
+                    BorderWidth="1"
+                    CornerRadius="5"
+                    FontSize="12"
+                    HeightRequest="35" />
+        </StackLayout>
+    </Shell.FlyoutHeader>
+
+    <TabBar IsVisible="{Binding IsLoggedIn}">
         <ShellContent
             Title="Reservas"
             Icon="calendar_today.png"

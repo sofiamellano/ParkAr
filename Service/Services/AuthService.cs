@@ -15,7 +15,7 @@ namespace Service.Services
     {
         private readonly IConfiguration _configuration;
         public AuthService(){ }
-        public async Task<string?> Login(LoginDTO? login)
+        public async Task<bool> Login(LoginDTO? login)
         {
             if (login == null)
             {
@@ -26,15 +26,17 @@ namespace Service.Services
                 var UrlApi = Properties.Resources.UrlApi;
                 var endpointAuth = ApiEndpoints.GetEndpoint("Login");
                 var client = new HttpClient();
-                var response = await client.PostAsJsonAsync($"{UrlApi}{endpointAuth}/login",login);
+                var response = await client.PostAsJsonAsync($"{UrlApi}{endpointAuth}/login/",login);
                 if (response.IsSuccessStatusCode)
                 {
                     var result = await response.Content.ReadAsStringAsync();
-                    return result;
+
+                    GenericService<object>.jwtToken = result;
+                    return true;
                 }
                 else
                 {
-                    return null;
+                    return false;
                 }
             }
             catch (Exception ex)

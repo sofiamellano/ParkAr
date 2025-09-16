@@ -10,11 +10,6 @@ public partial class App : Application
     {
         InitializeComponent();
 
-        // Iniciar con la página de Login
-        var authService = new AuthService();
-        var loginViewModel = new LoginPageViewModel(authService);
-        var loginPage = new LoginPage(loginViewModel);
-        
-        MainPage = new NavigationPage(loginPage);
+        MainPage = new AppShell();
     }
 }

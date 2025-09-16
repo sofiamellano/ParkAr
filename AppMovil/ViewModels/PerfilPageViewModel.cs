@@ -27,7 +27,7 @@ public partial class PerfilPageViewModel : BaseViewModel
     {
         // Navegar de vuelta a Login (cerrar sesión)
         var authService = new Service.Services.AuthService();
-        var loginViewModel = new LoginPageViewModel(authService);
+        var loginViewModel = new LoginPageViewModel();
         var loginPage = new Pages.LoginPage(loginViewModel);
         
         Application.Current.MainPage = new NavigationPage(loginPage);
@@ -87,7 +87,7 @@ public partial class PerfilPageViewModel : BaseViewModel
             
             // Regresar a LoginPage
             var authService = new Service.Services.AuthService();
-            var loginViewModel = new LoginPageViewModel(authService);
+            var loginViewModel = new LoginPageViewModel();
             var loginPage = new Pages.LoginPage(loginViewModel);
             
             Application.Current.MainPage = new NavigationPage(loginPage);

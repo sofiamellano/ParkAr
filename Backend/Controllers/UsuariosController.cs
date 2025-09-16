@@ -54,6 +54,21 @@ namespace Backend.Controllers
             return usuario;
         }
 
+        [HttpGet("byemail")]
+        public async Task<ActionResult<Usuario>> GetByEmailUsuario([FromQuery] string email)
+        {
+            if (string.IsNullOrEmpty(email))
+            {
+                return BadRequest("El parametro email es obligatorio.");
+            }
+            var usuario = await _context.Usuarios.AsNoTracking().FirstOrDefaultAsync(u => u.Email.Equals(email));
+            if (usuario == null)
+            {
+                return NotFound();
+            }
+            return usuario;
+        }
+
         [HttpPut("{id}")]
         public async Task<IActionResult> PutUsuario(int id, Usuario usuario)
         {

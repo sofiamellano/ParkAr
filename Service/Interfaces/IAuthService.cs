@@ -9,6 +9,6 @@ namespace Service.Interfaces
 {
     public interface IAuthService
     {
-        Task<string?> Login(LoginDTO login);
+        Task<bool> Login(LoginDTO login);
     }
 }

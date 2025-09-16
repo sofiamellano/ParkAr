@@ -14,5 +14,10 @@ namespace Service.Models
 
         // Relaciones
         public ICollection<Reserva>? Reservas { get; set; }
+
+        public override string ToString()
+        {
+            return $"Plaza {Numero}";
+        }
     }
 }

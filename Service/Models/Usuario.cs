@@ -21,6 +21,11 @@ namespace Service.Models
         public ICollection<Suscripcion>? Suscripciones { get; set; }
         public ICollection<Reserva>? Reservas { get; set; }
         public ICollection<Pago>? Pagos { get; set; }
+
+        public override string ToString()
+        {
+            return $"{Nombre} ({Email})";
+        }
     }
 
 }

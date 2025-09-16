@@ -23,6 +23,11 @@ namespace Service.Models
         public Vehiculo? Vehiculo { get; set; }
         public Lugar? Lugar { get; set; }
         public ICollection<Pago>? Pagos { get; set; }
+
+        public override string ToString()
+        {
+            return $"Reserva #{Id} - {Lugar?.ToString() ?? "Plaza N/A"} - {FechaInicio:dd/MM/yyyy HH:mm} ({EstadoReserva})";
+        }
     }
 
 }

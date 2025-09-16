@@ -18,5 +18,10 @@ namespace Service.Models
         // Relaciones
         public Usuario? Usuario { get; set; }
         public ICollection<Reserva>? Reservas { get; set; }
+
+        public override string ToString()
+        {
+            return $"{Patente} ({TipoVehiculo})";
+        }
     }
 }

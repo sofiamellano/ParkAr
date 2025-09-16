@@ -18,5 +18,10 @@ namespace Service.Models
 
         // Relaciones
         public ICollection<Suscripcion>? Suscripciones { get; set; }
+
+        public override string ToString()
+        {
+            return $"{Nombre} - ${Precio:N0}{(Duracion.HasValue ? $"/{Duracion} días" : "/hora")}";
+        }
     }
 }

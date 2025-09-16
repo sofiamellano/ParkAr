@@ -31,6 +31,7 @@ namespace AppMovil
             builder.Services.AddTransient<HistorialPageViewModel>();
             builder.Services.AddTransient<TicketPageViewModel>();
             builder.Services.AddTransient<PerfilPageViewModel>();
+            builder.Services.AddSingleton<AppShellViewModel>();
 
             // Registrar páginas
             builder.Services.AddTransient<LoginPage>();
