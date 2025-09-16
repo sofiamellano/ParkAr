@@ -4,8 +4,17 @@
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:viewmodels="clr-namespace:AppMovil.ViewModels"
+    xmlns:models="clr-namespace:Service.Models;assembly=Service"
+    xmlns:converters="clr-namespace:AppMovil.Converters"
     Title="{Binding Title}"
     x:DataType="viewmodels:ReservasPageViewModel">
+
+    <ContentPage.Resources>
+        <ResourceDictionary>
+            <!-- Convertidor para invertir booleanos -->
+            <converters:InvertedBoolConverter x:Key="InvertedBoolConverter" />
+        </ResourceDictionary>
+    </ContentPage.Resources>
 
     <Grid>
         <Grid.RowDefinitions>
@@ -22,10 +31,10 @@
             CornerRadius="5"
             Margin="20,10" />
 
-        <StackLayout Grid.Row="1" IsVisible="{Binding HasReservas}">
+        <StackLayout Grid.Row="1" IsVisible="{Binding TieneReservas}">
             <CollectionView ItemsSource="{Binding Reservas}" Margin="20,0">
                 <CollectionView.ItemTemplate>
-                    <DataTemplate x:DataType="viewmodels:ReservaItem">
+                    <DataTemplate x:DataType="models:Reserva">
                         <Grid Padding="15" Margin="0,5">
                             <Frame BackgroundColor="White" 
                                    BorderColor="LightGray" 
@@ -33,22 +42,20 @@
                                    HasShadow="True">
                                 <StackLayout Spacing="10">
                                     <Label 
-                                        Text="{Binding Lugar}" 
+                                        Text="{Binding Lugar.Numero, StringFormat='Plaza {0}'}" 
                                         FontSize="16" 
                                         FontAttributes="Bold" />
                                     
                                     <StackLayout Orientation="Horizontal">
                                         <Label Text="Fecha:" FontSize="14" />
-                                        <Label Text="{Binding Fecha, StringFormat='{0:dd/MM/yyyy}'}" FontSize="14" />
+                                        <Label Text="{Binding FechaInicio, StringFormat='{0:dd/MM/yyyy}'}" FontSize="14" />
                                         <Label Text="Hora:" FontSize="14" />
-                                        <Label Text="{Binding Hora}" FontSize="14" />
+                                        <Label Text="{Binding FechaInicio, StringFormat='{0:HH:mm}'}" FontSize="14" />
                                     </StackLayout>
 
                                     <StackLayout Orientation="Horizontal">
                                         <Label Text="Estado:" FontSize="12" />
-                                        <Label Text="{Binding Estado}" FontSize="12" FontAttributes="Bold" />
-                                        <Label Text="|" FontSize="12" />
-                                        <Label Text="{Binding Precio}" FontSize="12" FontAttributes="Bold" />
+                                        <Label Text="{Binding EstadoReserva}" FontSize="12" FontAttributes="Bold" />
                                     </StackLayout>
 
                                     <StackLayout Orientation="Horizontal" Spacing="10" Margin="0,10,0,0">
@@ -94,13 +101,13 @@
                      x:Name="EmptyStateLayout"
                      VerticalOptions="CenterAndExpand" 
                      HorizontalOptions="CenterAndExpand"
-                     IsVisible="{Binding HasReservas, Converter={StaticResource InvertedBoolConverter}}">
+                     IsVisible="{Binding TieneReservas, Converter={StaticResource InvertedBoolConverter}}">
             <Label 
-                Text="P"
+                Text="🅿️"
                 FontSize="48"
                 HorizontalOptions="Center" />
             <Label 
-                Text="No tienes reservas activas"
+                Text="{Binding MensajeVacio}"
                 FontSize="18"
                 HorizontalOptions="Center"
                 Margin="0,10" />

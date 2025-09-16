@@ -1,48 +1,86 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Service.Models;
+using Service.Services;
 using System.Collections.ObjectModel;
 
 namespace AppMovil.ViewModels;
 
 public partial class ReservasPageViewModel : BaseViewModel
 {
-    [ObservableProperty]
-    private ObservableCollection<ReservaItem> reservas = new();
+    ReservaService _reservaService = new ReservaService();
 
     [ObservableProperty]
-    private bool hasReservas;
+    private string mensajeVacio = "No tienes reservas activas";
+
+    [ObservableProperty]
+    private ObservableCollection<Reserva> reservas = new();
+
+    public bool TieneReservas => Reservas.Count > 0;
+
+    public IRelayCommand GetAllCommand { get; }
+
+    private int _idUserLogin;
 
     public ReservasPageViewModel()
     {
         Title = "Mis Reservas";
-        LoadReservas();
+        GetAllCommand = new RelayCommand(OnGetAll);
+        _idUserLogin = Preferences.Get("UserLoginId", 0);
+        _ = InicializeAsync();
     }
 
-    private void LoadReservas()
+    private async Task InicializeAsync()
     {
-        // Simular datos de reservas
-        Reservas = new ObservableCollection<ReservaItem>
+        OnGetAll();
+    }
+
+    private async void OnGetAll()
+    {
+        if (IsBusy) return;
+
+        try
         {
-            new ReservaItem 
-            { 
-                Id = 1, 
-                Lugar = "Parking Centro - Plaza 12",
-                Fecha = DateTime.Now.AddDays(1),
-                Hora = "14:00",
-                Estado = "Confirmada",
-                Precio = "$500"
-            },
-            new ReservaItem 
-            { 
-                Id = 2, 
-                Lugar = "Parking Norte - Plaza 5",
-                Fecha = DateTime.Now.AddDays(2),
-                Hora = "10:30",
-                Estado = "Pendiente",
-                Precio = "$300"
+            IsBusy = true;
+            
+            // Verificar si el usuario está logueado
+            if (_idUserLogin <= 0)
+            {
+                MensajeVacio = "Debes iniciar sesión para ver tus reservas";
+                reservas = new ObservableCollection<Reserva>();
+                OnPropertyChanged(nameof(Reservas));
+                OnPropertyChanged(nameof(TieneReservas));
+                return;
             }
-        };
-        HasReservas = Reservas.Count > 0;
+
+            var reservasList = await _reservaService.GetByUsuarioAsync(_idUserLogin);
+            reservas = new ObservableCollection<Reserva>(reservasList ?? new List<Reserva>());
+            
+            // Actualizar mensaje si no hay reservas
+            if (!reservas.Any())
+            {
+                MensajeVacio = "No tienes reservas activas";
+            }
+            
+            OnPropertyChanged(nameof(Reservas));
+            OnPropertyChanged(nameof(TieneReservas));
+        }
+        catch (ArgumentException ex)
+        {
+            // Error de validación (usuario no logueado)
+            MensajeVacio = "Debes iniciar sesión para ver tus reservas";
+            await Shell.Current.DisplayAlert("Error", ex.Message, "OK");
+        }
+        catch (Exception ex)
+        {
+            // Otros errores
+            MensajeVacio = "Error al cargar las reservas";
+            await Shell.Current.DisplayAlert("Error", $"No se pudieron cargar las reservas: {ex.Message}", "OK");
+        }
+        finally
+        {
+            IsBusy = false;
+        }
     }
 
     [RelayCommand]
@@ -52,30 +90,32 @@ public partial class ReservasPageViewModel : BaseViewModel
     }
 
     [RelayCommand]
-    private async Task EditReserva(ReservaItem reserva)
+    private async Task EditReserva(Reserva reserva)
     {
         if (reserva == null) return;
-        await Shell.Current.DisplayAlert("Modificar Reserva", $"Modificar reserva: {reserva.Lugar}", "OK");
+        var lugarTexto = reserva.Lugar?.ToString() ?? "Plaza N/A";
+        await Shell.Current.DisplayAlert("Modificar Reserva", $"Modificar reserva: {lugarTexto}", "OK");
     }
 
     [RelayCommand]
-    private async Task CancelReserva(ReservaItem reserva)
+    private async Task CancelReserva(Reserva reserva)
     {
         if (reserva == null) return;
 
+        var lugarTexto = reserva.Lugar?.ToString() ?? "Plaza N/A";
         var result = await Shell.Current.DisplayAlert("Cancelar Reserva", 
-            $"¿Está seguro de cancelar la reserva en {reserva.Lugar}?", "Sí", "No");
+            $"¿Está seguro de cancelar la reserva en {lugarTexto}?", "Sí", "No");
 
         if (result)
         {
             Reservas.Remove(reserva);
-            HasReservas = Reservas.Count > 0;
+            OnPropertyChanged(nameof(TieneReservas));
             await Shell.Current.DisplayAlert("Reserva Cancelada", "La reserva ha sido cancelada", "OK");
         }
     }
 
     [RelayCommand]
-    private async Task ViewTicket(ReservaItem reserva)
+    private async Task ViewTicket(Reserva reserva)
     {
         if (reserva == null) return;
         await Shell.Current.GoToAsync($"TicketPage?reservaId={reserva.Id}");
@@ -83,17 +123,10 @@ public partial class ReservasPageViewModel : BaseViewModel
 
     public override async Task OnAppearingAsync()
     {
-        LoadReservas();
+        // Refrescar el ID del usuario en caso de que haya cambiado
+        _idUserLogin = Preferences.Get("UserLoginId", 0);
+        OnGetAll();
         await base.OnAppearingAsync();
     }
 }
 
-public class ReservaItem
-{
-    public int Id { get; set; }
-    public string Lugar { get; set; } = string.Empty;
-    public DateTime Fecha { get; set; }
-    public string Hora { get; set; } = string.Empty;
-    public string Estado { get; set; } = string.Empty;
-    public string Precio { get; set; } = string.Empty;
-}

@@ -61,6 +61,12 @@ public partial class LoginPageViewModel : BaseViewModel
             {
                 var usuario = await _usuarioService.GetByEmailAsync(Email);
 
+                // ✅ Guardar el ID del usuario en las preferencias
+                if (usuario != null)
+                {
+                    Preferences.Set("UserLoginId", usuario.Id);
+                }
+
                 // ✅ Usar siempre el AppShell actual
                 if (Application.Current?.MainPage is AppShell shell)
                 {

@@ -54,6 +54,19 @@ namespace Backend.Controllers
             return reserva;
         }
 
+        [HttpGet("byusuario")]
+        public async Task<ActionResult<List<Reserva>?>> GetByUsuario([FromQuery] int idusuario = 0)
+        {
+            if (idusuario == 0)
+            {
+                return BadRequest("Ël parametro idusuario es obligatorio.");
+            }
+
+            var reservas = await _context.Reservas.Include(p => p.Lugar).AsNoTracking().Where(p => p.UsuarioId.Equals(idusuario)).ToListAsync();
+
+            return reservas;
+        }
+
         [HttpPut("{id}")]
         public async Task<IActionResult> PutReserva(int id, Reserva reserva)
         {
