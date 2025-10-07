@@ -1,10 +1,13 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Service.Services;
 
 namespace AppMovil.ViewModels;
 
 public partial class RegisterPageViewModel : BaseViewModel
 {
+    private readonly AuthService _authService;
+
     [ObservableProperty]
     private string fullName = string.Empty;
 
@@ -23,6 +26,7 @@ public partial class RegisterPageViewModel : BaseViewModel
     public RegisterPageViewModel()
     {
         Title = "Registrarse";
+        _authService = new AuthService();
     }
 
     [RelayCommand]
@@ -47,11 +51,27 @@ public partial class RegisterPageViewModel : BaseViewModel
         {
             IsBusy = true;
 
-            // Simular registro
-            await Task.Delay(1000);
+            // Usar el método del AuthService para crear el usuario
+            bool registrationResult = await _authService.CreateUserWithEmailAndPasswordAsync(Email, Password, FullName);
 
-            await Application.Current.MainPage.DisplayAlert("Éxito", "Usuario registrado correctamente", "OK");
-            await Application.Current.MainPage.Navigation.PopAsync();
+            if (registrationResult)
+            {
+                await Application.Current.MainPage.DisplayAlert("Éxito", "Usuario registrado correctamente", "OK");
+                
+                // Limpiar los campos
+                FullName = string.Empty;
+                Email = string.Empty;
+                Password = string.Empty;
+                ConfirmPassword = string.Empty;
+                PhoneNumber = string.Empty;
+                
+                // Volver a la página de login
+                await Application.Current.MainPage.Navigation.PopAsync();
+            }
+            else
+            {
+                await Application.Current.MainPage.DisplayAlert("Error", "No se pudo registrar el usuario. Verifique los datos e intente nuevamente.", "OK");
+            }
         }
         catch (Exception ex)
         {

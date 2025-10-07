@@ -1,13 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+﻿using Backend.DataContext;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Backend.DataContext;
+using Service.Enums;
 using Service.Models;
-using Microsoft.AspNetCore.Authorization;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace Backend.Controllers
 {
@@ -33,6 +34,46 @@ namespace Backend.Controllers
                 query = query.Where(l => l.Numero == filtro.Value);
             }
             return await query.ToListAsync();
+        }
+        [HttpGet("disponibles")]
+        public async Task<ActionResult<List<Lugar>>> GetDisponibles(
+    [FromQuery] DateTime fechaInicio,
+    [FromQuery] DateTime fechaFin)
+        {
+            try
+            {
+                // Validar fechas
+                if (fechaInicio >= fechaFin)
+                {
+                    return BadRequest("La fecha de inicio debe ser anterior a la fecha de fin");
+                }
+
+                if (fechaInicio < DateTime.Now)
+                {
+                    return BadRequest("La fecha de inicio debe ser futura");
+                }
+
+                // Obtener lugares que NO tienen reservas activas en el rango de fechas
+                var lugaresOcupados = await _context.Reservas
+                    .Where(r => !r.IsDeleted &&
+                               r.EstadoReserva == EstadoReservaEnum.Activa &&
+                               ((r.FechaInicio <= fechaInicio && r.FechaFin > fechaInicio) ||
+                                (r.FechaInicio < fechaFin && r.FechaFin >= fechaFin) ||
+                                (r.FechaInicio >= fechaInicio && r.FechaFin <= fechaFin)))
+                    .Select(r => r.LugarId)
+                    .Distinct()
+                    .ToListAsync();
+
+                var lugaresDisponibles = await _context.Lugares
+                    .Where(l => !l.IsDeleted && !lugaresOcupados.Contains(l.Id))
+                    .ToListAsync();
+
+                return Ok(lugaresDisponibles);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Error interno del servidor: {ex.Message}");
+            }
         }
 
         [HttpGet("deleteds")]

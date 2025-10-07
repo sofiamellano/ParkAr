@@ -106,6 +106,16 @@
                         </Frame>
                     </StackLayout>
 
+                    <!-- Forgot Password Button -->
+                    <Button Text="¿Olvidaste tu contraseña?"
+                            Command="{Binding GoToRecuperarPasswordCommand}"
+                            FontSize="14"
+                            TextColor="#4A90E2"
+                            BackgroundColor="Transparent"
+                            HorizontalOptions="End"
+                            Margin="0,5,12,0"
+                            Padding="0" />
+
                     <!-- Login Button -->
                     <Frame BackgroundColor="#4A90E2"
                            CornerRadius="12"

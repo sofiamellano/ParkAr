@@ -1,7 +1,7 @@
 ﻿using ObjCRuntime;
 using UIKit;
 
-namespace AppMovil
+namespace AppMovil.Platforms.iOS
 {
     public class Program
     {

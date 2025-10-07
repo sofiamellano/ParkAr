@@ -31,6 +31,30 @@ namespace Backend.Controllers
             }
             return await query.ToListAsync();
         }
+        [HttpGet("byusuario")]
+        public async Task<ActionResult<List<Vehiculo>>> GetByUsuario([FromQuery] int idusuario)
+        {
+            try
+            {
+                // Validar que el ID de usuario sea válido
+                if (idusuario <= 0)
+                {
+                    return BadRequest("El ID de usuario debe ser mayor que 0");
+                }
+
+                // Obtener vehículos del usuario específico
+                var vehiculos = await _context.Vehiculos
+                    .Where(v => v.UsuarioId == idusuario && !v.IsDeleted)
+                    .Include(v => v.Usuario) // Si necesitas datos del usuario
+                    .ToListAsync();
+
+                return Ok(vehiculos);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Error interno del servidor: {ex.Message}");
+            }
+        }
 
         [HttpGet("deleteds")]
         public async Task<ActionResult<IEnumerable<Vehiculo>>> GetDeletedVehiculos([FromQuery] string? filtro = null)

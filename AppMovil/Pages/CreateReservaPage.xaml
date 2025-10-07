@@ -1,0 +1,358 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:viewModels="clr-namespace:AppMovil.ViewModels"
+             xmlns:models="clr-namespace:Service.Models;assembly=Service"
+             xmlns:system="clr-namespace:System;assembly=netstandard"
+             x:Class="AppMovil.Pages.CreateReservaPage"
+             Title="{Binding Title}"
+             x:DataType="viewModels:CreateReservaViewModel"
+             BackgroundColor="#F8F9FA">
+
+    <ContentPage.BindingContext>
+        <viewModels:CreateReservaViewModel />
+    </ContentPage.BindingContext>
+
+    <ScrollView>
+        <StackLayout Padding="20" Spacing="25">
+            
+            <!-- Header -->
+            <Frame BackgroundColor="#4ECDC4" 
+                   CornerRadius="15" 
+                   HasShadow="True" 
+                   Padding="20">
+                <StackLayout>
+                    <Label Text="🅿️" 
+                           FontSize="36" 
+                           HorizontalOptions="Center"/>
+                    <Label Text="{Binding Title}" 
+                           FontSize="22" 
+                           FontAttributes="Bold"
+                           TextColor="White"
+                           HorizontalOptions="Center"/>
+                    <Label Text="Complete los datos para su reserva" 
+                           FontSize="14" 
+                           TextColor="White"
+                           HorizontalOptions="Center"
+                           Opacity="0.9"
+                           IsVisible="{Binding EsModoEdicion, Converter={StaticResource InvertedBoolConverter}}"/>
+                    <Label Text="Modifica los datos de tu reserva" 
+                           FontSize="14" 
+                           TextColor="White"
+                           HorizontalOptions="Center"
+                           Opacity="0.9"
+                           IsVisible="{Binding EsModoEdicion}"/>
+                </StackLayout>
+            </Frame>
+
+            <!-- Selección de Vehículo -->
+            <Frame BackgroundColor="White" 
+                   CornerRadius="12" 
+                   HasShadow="True" 
+                   Padding="15">
+                <StackLayout Spacing="12">
+                    <Label Text="🚗 Seleccionar Vehículo" 
+                           FontSize="16" 
+                           FontAttributes="Bold"
+                           TextColor="#2C3E50"/>
+                    
+                    <Picker ItemsSource="{Binding Vehiculos}"
+                            SelectedItem="{Binding VehiculoSeleccionado}"
+                            ItemDisplayBinding="{Binding .}"
+                            Title="Seleccione su vehículo"
+                            BackgroundColor="#F1F2F6"
+                            TextColor="#2C3E50"
+                            TitleColor="#7F8C8D"/>
+                </StackLayout>
+            </Frame>
+
+            <!-- Selección de Plaza -->
+            <Frame BackgroundColor="White" 
+                   CornerRadius="12" 
+                   HasShadow="True" 
+                   Padding="15">
+                <StackLayout Spacing="12">
+                    <Label Text="📍 Seleccionar Plaza Disponible" 
+                           FontSize="16" 
+                           FontAttributes="Bold"
+                           TextColor="#2C3E50"/>
+                    
+                    <Picker ItemsSource="{Binding LugaresDisponibles}"
+                            SelectedItem="{Binding LugarSeleccionado}"
+                            ItemDisplayBinding="{Binding .}"
+                            Title="Seleccione una plaza disponible"
+                            BackgroundColor="#F1F2F6"
+                            TextColor="#2C3E50"
+                            TitleColor="#7F8C8D"/>
+                    
+                    <Label Text="{Binding LugaresDisponibles.Count, StringFormat='Plazas disponibles: {0}'}"
+                           FontSize="12"
+                           TextColor="#27AE60"
+                           FontAttributes="Italic"/>
+                </StackLayout>
+            </Frame>
+
+            <!-- Fecha y Hora Mejorada -->
+            <Frame BackgroundColor="White" 
+                   CornerRadius="12" 
+                   HasShadow="True" 
+                   Padding="15">
+                <StackLayout Spacing="15">
+                    <Label Text="📅 Fecha y Hora de Inicio" 
+                           FontSize="16" 
+                           FontAttributes="Bold"
+                           TextColor="#2C3E50"/>
+                    
+                    <!-- Grid para fecha y hora en la misma línea -->
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="15">
+                        <!-- Fecha -->
+                        <StackLayout Grid.Column="0" Spacing="8">
+                            <Label Text="Fecha" 
+                                   FontSize="14" 
+                                   FontAttributes="Bold"
+                                   TextColor="#7F8C8D"/>
+                            <Frame BackgroundColor="#F1F2F6" 
+                                   Padding="10" 
+                                   CornerRadius="8"
+                                   HasShadow="False">
+                                <DatePicker Date="{Binding FechaInicio}"
+                                            BackgroundColor="Transparent"
+                                            TextColor="#2C3E50"
+                                            FontSize="14"/>
+                            </Frame>
+                        </StackLayout>
+
+                        <!-- Hora -->
+                        <StackLayout Grid.Column="1" Spacing="8">
+                            <Label Text="Hora" 
+                                   FontSize="14" 
+                                   FontAttributes="Bold"
+                                   TextColor="#7F8C8D"/>
+                            <Frame BackgroundColor="#F1F2F6" 
+                                   Padding="10" 
+                                   CornerRadius="8"
+                                   HasShadow="False">
+                                <TimePicker Time="{Binding HoraInicio}"
+                                            BackgroundColor="Transparent"
+                                            TextColor="#2C3E50"
+                                            FontSize="14"/>
+                            </Frame>
+                        </StackLayout>
+                    </Grid>
+                </StackLayout>
+            </Frame>
+
+            <!-- Duración Mejorada -->
+            <Frame BackgroundColor="White" 
+                   CornerRadius="12" 
+                   HasShadow="True" 
+                   Padding="15">
+                <StackLayout Spacing="15">
+                    <Label Text="⏱️ Duración de la Reserva" 
+                           FontSize="16" 
+                           FontAttributes="Bold"
+                           TextColor="#2C3E50"/>
+                    
+                    <!-- Duración actual with mejor diseño -->
+                    <Frame BackgroundColor="#E8F8F5" 
+                           BorderColor="#4ECDC4"
+                           CornerRadius="8"
+                           Padding="15"
+                           HasShadow="False">
+                        <Label Text="{Binding Duracion, StringFormat='{0:hh} horas {0:mm} minutos'}" 
+                               FontSize="18" 
+                               FontAttributes="Bold"
+                               TextColor="#4ECDC4"
+                               HorizontalOptions="Center"/>
+                    </Frame>
+                    
+                    <!-- Botones de duración predefinida -->
+                    <Label Text="Selecciona una duración:" 
+                           FontSize="14" 
+                           TextColor="#7F8C8D"/>
+                    
+                    <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="10" RowSpacing="10">
+                        <Button Grid.Row="0" Grid.Column="0"
+                                Text="1 hora"
+                                Command="{Binding EstablecerDuracionCommand}"
+                                CommandParameter="1h"
+                                BackgroundColor="#3498DB"
+                                TextColor="White"
+                                CornerRadius="20"
+                                FontSize="14"/>
+                        <Button Grid.Row="0" Grid.Column="1"
+                                Text="2 horas"
+                                Command="{Binding EstablecerDuracionCommand}"
+                                CommandParameter="2h"
+                                BackgroundColor="#3498DB"
+                                TextColor="White"
+                                CornerRadius="20"
+                                FontSize="14"/>
+                        <Button Grid.Row="1" Grid.Column="0"
+                                Text="4 horas"
+                                Command="{Binding EstablecerDuracionCommand}"
+                                CommandParameter="4h"
+                                BackgroundColor="#3498DB"
+                                TextColor="White"
+                                CornerRadius="20"
+                                FontSize="14"/>
+                        <Button Grid.Row="1" Grid.Column="1"
+                                Text="8 horas"
+                                Command="{Binding EstablecerDuracionCommand}"
+                                CommandParameter="8h"
+                                BackgroundColor="#3498DB"
+                                TextColor="White"
+                                CornerRadius="20"
+                                FontSize="14"/>
+                    </Grid>
+
+                    <!-- Ajuste fino -->
+                    <Label Text="Ajuste fino:" 
+                           FontSize="14" 
+                           TextColor="#7F8C8D"
+                           Margin="0,10,0,0"/>
+                    
+                    <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="8">
+                        <Button Grid.Column="0"
+                                Text="-30min"
+                                Command="{Binding AgregarTiempoCommand}"
+                                CommandParameter="-30min"
+                                BackgroundColor="#E74C3C"
+                                TextColor="White"
+                                CornerRadius="15"
+                                FontSize="12"
+                                HeightRequest="35"/>
+                        <Button Grid.Column="1"
+                                Text="-1h"
+                                Command="{Binding AgregarTiempoCommand}"
+                                CommandParameter="-1h"
+                                BackgroundColor="#E74C3C"
+                                TextColor="White"
+                                CornerRadius="15"
+                                FontSize="12"
+                                HeightRequest="35"/>
+                        <Button Grid.Column="2"
+                                Text="+30min"
+                                Command="{Binding AgregarTiempoCommand}"
+                                CommandParameter="30min"
+                                BackgroundColor="#27AE60"
+                                TextColor="White"
+                                CornerRadius="15"
+                                FontSize="12"
+                                HeightRequest="35"/>
+                        <Button Grid.Column="3"
+                                Text="+1h"
+                                Command="{Binding AgregarTiempoCommand}"
+                                CommandParameter="1h"
+                                BackgroundColor="#27AE60"
+                                TextColor="White"
+                                CornerRadius="15"
+                                FontSize="12"
+                                HeightRequest="35"/>
+                    </Grid>
+                </StackLayout>
+            </Frame>
+
+            <!-- Mensaje de Error -->
+            <Frame BackgroundColor="#FADBD8" 
+                   BorderColor="#E74C3C"
+                   CornerRadius="8"
+                   IsVisible="{Binding MostrarError}"
+                   Padding="15">
+                <Label Text="{Binding MensajeError}" 
+                       TextColor="#E74C3C"
+                       FontAttributes="Bold"/>
+            </Frame>
+
+            <!-- Resumen -->
+            <Frame BackgroundColor="#E8F8F5" 
+                   BorderColor="#4ECDC4"
+                   CornerRadius="12"
+                   IsVisible="{Binding PuedeCrearReserva}"
+                   Padding="15">
+                <StackLayout Spacing="8">
+                    <Label Text="📋 Resumen de la Reserva" 
+                           FontSize="16" 
+                           FontAttributes="Bold"
+                           TextColor="#2C3E50"/>
+                    
+                    <StackLayout Orientation="Horizontal">
+                        <Label Text="Vehículo: " 
+                               FontAttributes="Bold"
+                               TextColor="#2C3E50" 
+                               FontSize="14"/>
+                        <Label Text="{Binding VehiculoSeleccionado}" 
+                               TextColor="#2C3E50" 
+                               FontSize="14"/>
+                    </StackLayout>
+                    
+                    <StackLayout Orientation="Horizontal">
+                        <Label Text="Plaza: " 
+                               FontAttributes="Bold"
+                               TextColor="#2C3E50" 
+                               FontSize="14"/>
+                        <Label Text="{Binding LugarSeleccionado}" 
+                               TextColor="#2C3E50" 
+                               FontSize="14"/>
+                    </StackLayout>
+                    
+                    <StackLayout Orientation="Horizontal">
+                        <Label Text="Inicio: " 
+                               FontAttributes="Bold"
+                               TextColor="#2C3E50" 
+                               FontSize="14"/>
+                        <Label Text="{Binding FechaInicio, StringFormat='{0:dd/MM/yyyy}'}" 
+                               TextColor="#2C3E50" 
+                               FontSize="14"/>
+                        <Label Text=" a las " 
+                               TextColor="#2C3E50" 
+                               FontSize="14"/>
+                        <Label Text="{Binding HoraInicio, StringFormat='{0:hh\\:mm}'}" 
+                               TextColor="#2C3E50" 
+                               FontSize="14"/>
+                    </StackLayout>
+                    
+                    <StackLayout Orientation="Horizontal">
+                        <Label Text="Duración: " 
+                               FontAttributes="Bold"
+                               TextColor="#2C3E50" 
+                               FontSize="14"/>
+                        <Label Text="{Binding Duracion, StringFormat='{0:hh}h {0:mm}m'}" 
+                               TextColor="#2C3E50" 
+                               FontSize="14"/>
+                    </StackLayout>
+                </StackLayout>
+            </Frame>
+
+            <!-- Indicador de carga -->
+            <ActivityIndicator IsRunning="{Binding IsBusy}"
+                              IsVisible="{Binding IsBusy}"
+                              Color="#4ECDC4"
+                              WidthRequest="40"
+                              HeightRequest="40"/>
+
+            <!-- Botones -->
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="15" Margin="0,20,0,0">
+                <Button Grid.Column="0"
+                        Text="❌ Cancelar"
+                        Command="{Binding CancelarCommand}"
+                        BackgroundColor="Transparent"
+                        TextColor="#E74C3C"
+                        BorderColor="#E74C3C"
+                        BorderWidth="2"
+                        CornerRadius="25"
+                        HeightRequest="50"/>
+                
+                <Button Grid.Column="1"
+                        Text="{Binding TituloBotonPrincipal}"
+                        Command="{Binding CrearReservaCommand}"
+                        BackgroundColor="#4ECDC4"
+                        TextColor="White"
+                        CornerRadius="25"
+                        HeightRequest="50"
+                        IsEnabled="{Binding PuedeCrearReserva}"/>
+            </Grid>
+
+        </StackLayout>
+    </ScrollView>
+</ContentPage>

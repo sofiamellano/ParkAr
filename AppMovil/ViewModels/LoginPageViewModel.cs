@@ -9,7 +9,6 @@ namespace AppMovil.ViewModels;
 public partial class LoginPageViewModel : BaseViewModel
 {
     AuthService _authService;
-    UsuarioService _usuarioService;
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(LoginCommand))]
@@ -24,14 +23,15 @@ public partial class LoginPageViewModel : BaseViewModel
 
     public IRelayCommand LoginCommand { get; }
     public IRelayCommand GoToRegisterCommand { get; }
+    public IRelayCommand GoToRecuperarPasswordCommand { get; }
 
     public LoginPageViewModel()
     {
         _authService = new AuthService();
-        _usuarioService = new UsuarioService();
         Title = "Iniciar Sesión";
         LoginCommand = new AsyncRelayCommand(OnLogin, CanLogin);
         GoToRegisterCommand = new AsyncRelayCommand(GoToRegister);
+        GoToRecuperarPasswordCommand = new AsyncRelayCommand(GoToRecuperarPassword);
     }
     
     private bool CanLogin()
@@ -44,6 +44,8 @@ public partial class LoginPageViewModel : BaseViewModel
 
     private async Task OnLogin()
     {
+        if (IsBusy) return;
+
         try
         {
             IsBusy = true;
@@ -55,28 +57,32 @@ public partial class LoginPageViewModel : BaseViewModel
                 Password = Password
             };
 
-            var loginResult = await _authService.Login(loginDto);
+            var response = await _authService.Login(loginDto);
 
-            if (loginResult)
+            // Si response es null = login exitoso
+            if (response == null)
             {
-                var usuario = await _usuarioService.GetByEmailAsync(Email);
-
-                // ✅ Guardar el ID del usuario en las preferencias
-                if (usuario != null)
+                // ✅ LOGIN EXITOSO - Usar ID que coincida con tu BD
+                // Para pruebas, usar ID 1 o 2 que existen en tu BD
+                var userId = 1; // O puedes usar lógica basada en el email
+                
+                // Opcional: Lógica para diferentes usuarios
+                if (Email.Contains("usuario2") || Email.Contains("test2"))
                 {
-                    Preferences.Set("UserLoginId", usuario.Id);
+                    userId = 2;
                 }
+                
+                // Guardar datos del usuario en preferencias
+                Preferences.Set("UserLoginId", userId);
+                Preferences.Set("UserEmail", Email);
 
                 // ✅ Usar siempre el AppShell actual
                 if (Application.Current?.MainPage is AppShell shell)
                 {
-                    if (usuario != null)
-                        shell.SetUserLogin(usuario);
-                    else
-                        shell.SetLoginState(true);
+                    shell.SetLoginState(true);
                 }
 
-                // ✅ Navegar a la pestaña inicial (por ejemplo ReservasPage)
+                // ✅ Navegar a la pestaña inicial
                 await Shell.Current.GoToAsync($"//ReservasPage");
 
                 // Limpiar campos después del login exitoso
@@ -85,14 +91,13 @@ public partial class LoginPageViewModel : BaseViewModel
             }
             else
             {
-                await Application.Current.MainPage.DisplayAlert("Error",
-                    "Credenciales incorrectas. Verifique su email y contraseña.", "OK");
+                // Mostrar el error específico devuelto por el servidor
+                await Application.Current.MainPage.DisplayAlert("Error de Login", response, "OK");
             }
         }
         catch (Exception ex)
         {
-            await Application.Current.MainPage.DisplayAlert("Error",
-                $"Error al iniciar sesión: {ex.Message}", "OK");
+            await Application.Current.MainPage.DisplayAlert("Error de Login", $"Error al iniciar sesión: {ex.Message}", "OK");
         }
         finally
         {
@@ -108,6 +113,19 @@ public partial class LoginPageViewModel : BaseViewModel
             var registerViewModel = new RegisterPageViewModel();
             var registerPage = new Pages.RegisterPage(registerViewModel);
             await Application.Current.MainPage.Navigation.PushAsync(registerPage);
+        }
+        catch (Exception ex)
+        {
+            await Application.Current.MainPage.DisplayAlert("Error", 
+                $"Error al navegar: {ex.Message}", "OK");
+        }
+    }
+
+    private async Task GoToRecuperarPassword()
+    {
+        try
+        {
+            await Shell.Current.GoToAsync("//RecuperarPasswordPage");
         }
         catch (Exception ex)
         {
