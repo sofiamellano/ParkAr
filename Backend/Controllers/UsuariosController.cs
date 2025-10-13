@@ -24,7 +24,7 @@ namespace Backend.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Usuario>>> GetUsuarios([FromQuery] string? filtro = null)
         {
-            var query = _context.Usuarios.AsNoTracking().Include(u => u.Vehiculos).Include(u => u.Suscripciones).Include(u => u.Reservas).Include(u => u.Pagos).AsQueryable();
+            var query = _context.Usuarios.AsNoTracking().Include(u => u.Vehiculos).Include(u => u.Suscripciones).Include(u => u.Reservas).AsQueryable();
             if (!string.IsNullOrEmpty(filtro))
             {
                 query = query.Where(u => u.Nombre.Contains(filtro) || u.Email.Contains(filtro));
@@ -35,7 +35,7 @@ namespace Backend.Controllers
         [HttpGet("deleteds")]
         public async Task<ActionResult<IEnumerable<Usuario>>> GetDeletedUsuarios([FromQuery] string? filtro = null)
         {
-            var query = _context.Usuarios.AsNoTracking().IgnoreQueryFilters().Where(u => u.IsDeleted).Include(u => u.Vehiculos).Include(u => u.Suscripciones).Include(u => u.Reservas).Include(u => u.Pagos).AsQueryable();
+            var query = _context.Usuarios.AsNoTracking().IgnoreQueryFilters().Where(u => u.IsDeleted).Include(u => u.Vehiculos).Include(u => u.Suscripciones).Include(u => u.Reservas).AsQueryable();
             if (!string.IsNullOrEmpty(filtro))
             {
                 query = query.Where(u => u.Nombre.Contains(filtro) || u.Email.Contains(filtro));
@@ -46,7 +46,7 @@ namespace Backend.Controllers
         [HttpGet("{id}")]
         public async Task<ActionResult<Usuario>> GetUsuario(int id)
         {
-            var usuario = await _context.Usuarios.AsNoTracking().Include(u => u.Vehiculos).Include(u => u.Suscripciones).Include(u => u.Reservas).Include(u => u.Pagos).FirstOrDefaultAsync(u => u.Id == id);
+            var usuario = await _context.Usuarios.AsNoTracking().Include(u => u.Vehiculos).Include(u => u.Suscripciones).Include(u => u.Reservas).FirstOrDefaultAsync(u => u.Id == id);
             if (usuario == null)
             {
                 return NotFound();

@@ -1,0 +1,53 @@
+.auth-wrapper {
+    min-height: calc(100vh - 120px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    background: radial-gradient(1200px 600px at 10% 10%, rgba(13,110,253,.08), transparent),
+                radial-gradient(1200px 600px at 90% 20%, rgba(111,66,193,.08), transparent);
+}
+
+/* Más ancho y responsivo */
+.login-card {
+    width: 100%;
+    /* entre 560px y 900px, adaptado al viewport */
+    max-width: clamp(560px, 70vw, 900px);
+    background: rgba(255,255,255,.96);
+    backdrop-filter: blur(6px);
+}
+
+/* Opcional: aún más ancho en pantallas grandes */
+@media (min-width: 992px) { /* lg */
+    .login-card { max-width: 840px; }
+}
+@media (min-width: 1200px) { /* xl */
+    .login-card { max-width: 900px; }
+}
+
+.bg-gradient-primary {
+    background: linear-gradient(135deg, #6f42c1 0%, #0d6efd 100%);
+}
+
+.btn-gradient {
+    background: linear-gradient(135deg, #0d6efd 0%, #6610f2 100%);
+    color: #fff;
+    border: 0;
+    padding: .8rem 1rem;
+    font-weight: 600;
+    box-shadow: 0 0.5rem 1rem rgba(13,110,253,.2);
+}
+.btn-gradient:hover {
+    filter: brightness(1.05);
+}
+
+.input-group-text.bg-light-subtle {
+    background-color: #f6f7f9;
+}
+
+.input-group-lg .form-control {
+    padding-top: .9rem;
+    padding-bottom: .9rem;
+}
+
+.card-header .fs-4 { line-height: 1; }

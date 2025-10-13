@@ -8,8 +8,9 @@ namespace Service.Enums
 {
     public enum EstadoSuscripcionEnum
     {
-        Activo,
-        Vencido,
-        Cancelado
+        Inactivo,
+        Activo,      
+        Vencido,     
+        Cancelado    
     }
 }

@@ -16,8 +16,6 @@ namespace Backend.DataContext
         public DbSet<Plan> Planes { get; set; }
         public DbSet<Suscripcion> Suscripciones { get; set; }
         public DbSet<Reserva> Reservas { get; set; }
-        public DbSet<Pago> Pagos { get; set; }
-        public DbSet<Configuracion> Configuraciones { get; set; }
 
 
         public ParkARContext() { }
@@ -91,14 +89,6 @@ namespace Backend.DataContext
                 new Reserva { Id = 1, UsuarioId = 1, VehiculoId = 1, LugarId = 1, FechaInicio = DateTime.Parse("2025-08-25 09:00"), FechaFin = DateTime.Parse("2025-08-25 12:00"), EstadoReserva = EstadoReservaEnum.Finalizada, IsDeleted = false },
                 new Reserva { Id = 2, UsuarioId = 1, VehiculoId = 2, LugarId = 2, FechaInicio = DateTime.Parse("2025-08-29 15:00"), FechaFin = DateTime.Parse("2025-08-29 18:00"), EstadoReserva = EstadoReservaEnum.Activa, IsDeleted = false }
             );
-
-            // =============================
-            // PAGOS
-            // =============================
-            modelBuilder.Entity<Pago>().HasData(
-                new Pago { Id = 1, UsuarioId = 1, ReservaId = 1, SuscripcionId = null, Monto = 600.00m, Metodo = MetodoPagoEnum.Tarjeta, Fecha = DateTime.Parse("2025-08-25 12:05"), Concepto = ConceptoPagoEnum.Reserva, IsDeleted = false },
-                new Pago { Id = 2, UsuarioId = 1, ReservaId = null, SuscripcionId = 1, Monto = 5000.00m, Metodo = MetodoPagoEnum.App, Fecha = DateTime.Parse("2025-08-01 08:00"), Concepto = ConceptoPagoEnum.Suscripcion, IsDeleted = false }
-            );
             #endregion
 
             //configuramos los query filters para el borrado lógico
@@ -108,8 +98,6 @@ namespace Backend.DataContext
             modelBuilder.Entity<Plan>().HasQueryFilter(p => !p.IsDeleted);
             modelBuilder.Entity<Suscripcion>().HasQueryFilter(s => !s.IsDeleted);
             modelBuilder.Entity<Reserva>().HasQueryFilter(r => !r.IsDeleted);
-            modelBuilder.Entity<Pago>().HasQueryFilter(p => !p.IsDeleted);
-            modelBuilder.Entity<Configuracion>().HasQueryFilter(c => !c.IsDeleted);
         }
     }
 }

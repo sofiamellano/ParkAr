@@ -20,7 +20,6 @@ namespace Service.Models
         // Relaciones
         public Usuario? Usuario { get; set; }
         public Plan? Plan { get; set; }
-        public ICollection<Pago>? Pagos { get; set; }
 
         public override string ToString()
         {

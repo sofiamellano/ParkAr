@@ -1,0 +1,64 @@
+﻿@page "/recovery"
+@inject FirebaseAuthService _firebaseAuthService
+@inject SweetAlertService _sweetAlert
+@inject NavigationManager _navigationManager
+@rendermode InteractiveServer
+
+<div class="auth-wrapper">
+    <div class="card login-card shadow-lg border-0 rounded-4">
+        <div class="card-header bg-gradient-primary text-white border-0 rounded-top-4 py-3">
+            <div class="d-flex align-items-center">
+                <span class="me-2 fs-4">🔐</span>
+                <div>
+                    <h5 class="mb-0 fw-semibold">Recuperar contraseña en Biblio</h5>
+                </div>
+            </div>
+        </div>
+
+        <div class="card-body p-4 p-md-5">
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Correo electrónico</label>
+                <div class="input-group input-group-lg">
+                    <span class="input-group-text bg-light-subtle">
+                        <i class="bi bi-envelope"></i>
+                    </span>
+                    <InputText class="form-control" @bind-Value="email" placeholder="usuario@gmail.com" autocomplete="email" />
+                </div>
+            </div>
+
+            <button class="btn btn-gradient w-100 mb-3" @onclick="Enviar">
+                <i class="bi bi-box-arrow-in-right me-1"></i> Enviar
+            </button>
+
+        </div>
+
+        <div class="card-footer text-body-secondary text-center small">
+            Desarrollo 3er año - TSDS - 2025
+        </div>
+    </div>
+</div>
+
+@code {
+    string email = string.Empty;
+
+    private async Task Enviar()
+    {
+        try
+        {
+            var success = await _firebaseAuthService.RecoveryPassword(email);
+            if (success != null)
+            {
+                await _sweetAlert.FireAsync("Correo enviado", "Se ha enviado un correo para recuperar tu contraseña.", SweetAlertIcon.Success);
+            }
+            else
+            {
+                await _sweetAlert.FireAsync("Error", "No se pudo enviar el correo de recuperación. Verifica que el correo sea correcto.", SweetAlertIcon.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            await _sweetAlert.FireAsync("Error", $"Ocurrió un error: {ex.Message}", SweetAlertIcon.Error); 
+        }
+        _navigationManager.NavigateTo("/login");
+    }
+}

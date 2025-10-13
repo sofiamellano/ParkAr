@@ -4,6 +4,7 @@ using Backend.DataContext;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Backend.Migrations
 {
     [DbContext(typeof(ParkARContext))]
-    partial class ParkARContextModelSnapshot : ModelSnapshot
+    [Migration("20251013134240_FixEstadoReservaEnum")]
+    partial class FixEstadoReservaEnum
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -64,7 +67,7 @@ namespace Backend.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Configuracion");
+                    b.ToTable("Configuraciones");
 
                     b.HasData(
                         new
@@ -112,6 +115,73 @@ namespace Backend.Migrations
                             Id = 2,
                             IsDeleted = false,
                             Numero = 102
+                        });
+                });
+
+            modelBuilder.Entity("Service.Models.Pago", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("Concepto")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("Fecha")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<int>("Metodo")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("Monto")
+                        .HasColumnType("decimal(65,30)");
+
+                    b.Property<int?>("ReservaId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("SuscripcionId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("UsuarioId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReservaId");
+
+                    b.HasIndex("SuscripcionId");
+
+                    b.HasIndex("UsuarioId");
+
+                    b.ToTable("Pagos");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Concepto = 1,
+                            Fecha = new DateTime(2025, 8, 25, 12, 5, 0, 0, DateTimeKind.Unspecified),
+                            IsDeleted = false,
+                            Metodo = 1,
+                            Monto = 600.00m,
+                            ReservaId = 1,
+                            UsuarioId = 1
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Concepto = 0,
+                            Fecha = new DateTime(2025, 8, 1, 8, 0, 0, 0, DateTimeKind.Unspecified),
+                            IsDeleted = false,
+                            Metodo = 2,
+                            Monto = 5000.00m,
+                            SuscripcionId = 1,
+                            UsuarioId = 1
                         });
                 });
 
@@ -381,6 +451,29 @@ namespace Backend.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Service.Models.Pago", b =>
+                {
+                    b.HasOne("Service.Models.Reserva", "Reserva")
+                        .WithMany("Pagos")
+                        .HasForeignKey("ReservaId");
+
+                    b.HasOne("Service.Models.Suscripcion", "Suscripcion")
+                        .WithMany("Pagos")
+                        .HasForeignKey("SuscripcionId");
+
+                    b.HasOne("Service.Models.Usuario", "Usuario")
+                        .WithMany("Pagos")
+                        .HasForeignKey("UsuarioId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Reserva");
+
+                    b.Navigation("Suscripcion");
+
+                    b.Navigation("Usuario");
+                });
+
             modelBuilder.Entity("Service.Models.Reserva", b =>
                 {
                     b.HasOne("Service.Models.Lugar", "Lugar")
@@ -448,8 +541,20 @@ namespace Backend.Migrations
                     b.Navigation("Suscripciones");
                 });
 
+            modelBuilder.Entity("Service.Models.Reserva", b =>
+                {
+                    b.Navigation("Pagos");
+                });
+
+            modelBuilder.Entity("Service.Models.Suscripcion", b =>
+                {
+                    b.Navigation("Pagos");
+                });
+
             modelBuilder.Entity("Service.Models.Usuario", b =>
                 {
+                    b.Navigation("Pagos");
+
                     b.Navigation("Reservas");
 
                     b.Navigation("Suscripciones");

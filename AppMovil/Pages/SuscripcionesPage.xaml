@@ -4,131 +4,213 @@
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:viewmodels="clr-namespace:AppMovil.ViewModels"
+    xmlns:converters="clr-namespace:AppMovil.Converters"
     Title="{Binding Title}"
     x:DataType="viewmodels:SuscripcionesPageViewModel">
+
+    <ContentPage.Resources>
+        <ResourceDictionary>
+            <converters:InvertedBoolConverter x:Key="InvertedBoolConverter" />
+        </ResourceDictionary>
+    </ContentPage.Resources>
 
     <ScrollView>
         <StackLayout Padding="20" Spacing="20">
 
+            <!-- ✅ INDICADOR DE CARGA -->
+            <ActivityIndicator IsRunning="{Binding IsBusy}"
+                              IsVisible="{Binding IsBusy}"
+                              Color="#4ECDC4"
+                              HeightRequest="40" />
+
+            <!-- ✅ SUSCRIPCIÓN ACTUAL (CUANDO TIENE SUSCRIPCIÓN) -->
             <Frame IsVisible="{Binding TieneSuscripcionActiva}"
-                   BackgroundColor="LightGreen" 
-                   BorderColor="Transparent" 
-                   CornerRadius="10"
-                   Margin="0,10,0,0">
-                <StackLayout Spacing="10">
+                   BackgroundColor="#D4EDDA" 
+                   BorderColor="#C3E6CB" 
+                   CornerRadius="15"
+                   HasShadow="True"
+                   Margin="0,10,0,0"
+                   Padding="20">
+                <StackLayout Spacing="15">
                     <Label 
-                        Text="Mi Suscripcion Actual" 
+                        Text="✅ Mi Suscripción Actual" 
                         FontSize="18" 
                         FontAttributes="Bold" 
+                        TextColor="#155724"
                         HorizontalOptions="Center" />
                     
                     <Label 
-                        Text="{Binding SuscripcionActual.Plan}" 
+                        Text="{Binding SuscripcionActual.Nombre}" 
                         FontSize="16" 
                         FontAttributes="Bold" 
+                        TextColor="#155724"
                         HorizontalOptions="Center" />
                     
-                    <StackLayout Orientation="Horizontal" HorizontalOptions="Center">
-                        <Label Text="Estado:" FontSize="14" />
-                        <Label Text="{Binding SuscripcionActual.Estado}" FontSize="14" FontAttributes="Bold" />
+                    <StackLayout Orientation="Horizontal" HorizontalOptions="Center" Spacing="10">
+                        <Label Text="Estado:" FontSize="14" TextColor="#155724" />
+                        <Label Text="{Binding SuscripcionActual.Estado}" 
+                               FontSize="14" 
+                               FontAttributes="Bold" 
+                               TextColor="#28A745" />
                     </StackLayout>
 
-                    <StackLayout Orientation="Horizontal" HorizontalOptions="Center">
-                        <Label Text="Vence el:" FontSize="12" />
+                    <StackLayout Orientation="Horizontal" HorizontalOptions="Center" Spacing="10">
+                        <Label Text="Vence el:" FontSize="12" TextColor="#155724" />
                         <Label Text="{Binding SuscripcionActual.FechaVencimiento, StringFormat='{0:dd/MM/yyyy}'}" 
-                               FontSize="12" FontAttributes="Bold" />
+                               FontSize="12" 
+                               FontAttributes="Bold" 
+                               TextColor="#155724" />
                     </StackLayout>
 
                     <Button 
-                        Text="Renovar Suscripcion"
+                        Text="🔄 Renovar Suscripción"
                         Command="{Binding RenovarSuscripcionCommand}"
-                        BackgroundColor="Blue"
+                        BackgroundColor="#007BFF"
                         TextColor="White"
-                        CornerRadius="5"
+                        CornerRadius="10"
+                        FontSize="16"
+                        FontAttributes="Bold"
+                        HeightRequest="50"
                         Margin="0,10,0,0" />
                 </StackLayout>
             </Frame>
 
+            <!-- ✅ MENSAJE SIN SUSCRIPCIÓN (CUANDO NO TIENE SUSCRIPCIÓN) -->
             <Frame IsVisible="{Binding TieneSuscripcionActiva, Converter={StaticResource InvertedBoolConverter}}"
-                   BackgroundColor="LightCoral" 
-                   BorderColor="Transparent" 
-                   CornerRadius="10"
-                   Margin="0,10,0,0">
-                <StackLayout Spacing="10">
+                   BackgroundColor="#F8D7DA" 
+                   BorderColor="#F5C6CB" 
+                   CornerRadius="15"
+                   HasShadow="True"
+                   Margin="0,10,0,0"
+                   Padding="20">
+                <StackLayout Spacing="15">
                     <Label 
-                        Text="Sin Suscripcion Activa" 
+                        Text="❌ Sin Suscripción Activa" 
                         FontSize="18" 
                         FontAttributes="Bold" 
+                        TextColor="#721C24"
                         HorizontalOptions="Center" />
                     <Label 
-                        Text="Activa una suscripcion para disfrutar de todos los beneficios" 
+                        Text="Activa una suscripción para disfrutar de todos los beneficios de ParkAR" 
                         FontSize="14" 
+                        TextColor="#721C24"
                         HorizontalOptions="Center"
                         HorizontalTextAlignment="Center" />
                 </StackLayout>
             </Frame>
 
-            <Label 
-                Text="Planes Disponibles" 
-                FontSize="20" 
-                FontAttributes="Bold" 
-                HorizontalOptions="Center"
-                Margin="0,20,0,10" />
+            <!-- ✅ TÍTULO DE SUSCRIPCIONES DISPONIBLES -->
+            <StackLayout Orientation="Horizontal" HorizontalOptions="Center" Spacing="10" Margin="0,20,0,10">
+                <Label Text="📋" FontSize="20" VerticalOptions="Center" />
+                <Label 
+                    Text="Suscripciones Disponibles" 
+                    FontSize="20" 
+                    FontAttributes="Bold" 
+                    TextColor="#2C3E50"
+                    VerticalOptions="Center" />
+            </StackLayout>
 
-            <CollectionView ItemsSource="{Binding PlanesDisponibles}">
+            <!-- ✅ LISTA DE SUSCRIPCIONES DISPONIBLES -->
+            <CollectionView ItemsSource="{Binding SuscripcionesDisponibles}" Margin="0,10">
                 <CollectionView.ItemTemplate>
-                    <DataTemplate x:DataType="viewmodels:PlanSuscripcion">
+                    <DataTemplate x:DataType="viewmodels:SuscripcionDisponible">
                         <Grid Padding="0,10">
                             <Frame BackgroundColor="White" 
-                                   BorderColor="Blue" 
-                                   CornerRadius="10"
-                                   HasShadow="True">
+                                   BorderColor="#4ECDC4" 
+                                   CornerRadius="15"
+                                   HasShadow="True"
+                                   Padding="20">
                                 <StackLayout Spacing="15">
-                                    <StackLayout Orientation="Horizontal" HorizontalOptions="Center">
+                                    
+                                    <!-- Título y precio -->
+                                    <StackLayout HorizontalOptions="Center" Spacing="5">
                                         <Label 
                                             Text="{Binding Nombre}" 
                                             FontSize="18" 
-                                            FontAttributes="Bold" />
+                                            FontAttributes="Bold" 
+                                            TextColor="#2C3E50"
+                                            HorizontalOptions="Center" />
                                         <Label 
                                             Text="{Binding PrecioMensual, StringFormat='${0:N0}/mes'}" 
                                             FontSize="16" 
                                             FontAttributes="Bold"
-                                            TextColor="Blue" />
+                                            TextColor="#4ECDC4"
+                                            HorizontalOptions="Center" />
                                     </StackLayout>
 
+                                    <!-- Descripción -->
                                     <Label 
                                         Text="{Binding Descripcion}" 
                                         FontSize="14" 
+                                        TextColor="#7F8C8D"
                                         HorizontalOptions="Center"
                                         HorizontalTextAlignment="Center" />
 
+                                    <!-- Duración -->
+                                    <Frame BackgroundColor="#F8F9FA" 
+                                           BorderColor="#DEE2E6"
+                                           CornerRadius="8"
+                                           Padding="10,5"
+                                           HorizontalOptions="Center">
+                                        <Label Text="{Binding DuracionDias, StringFormat='Duración: {0} días'}" 
+                                               FontSize="12" 
+                                               FontAttributes="Bold"
+                                               TextColor="#495057" />
+                                    </Frame>
+
+                                    <!-- Beneficios -->
                                     <StackLayout>
-                                        <Label Text="Beneficios:" FontSize="12" FontAttributes="Bold" />
+                                        <Label Text="✨ Beneficios:" 
+                                               FontSize="14" 
+                                               FontAttributes="Bold" 
+                                               TextColor="#2C3E50"
+                                               Margin="0,0,0,5" />
                                         <CollectionView ItemsSource="{Binding Beneficios}">
                                             <CollectionView.ItemTemplate>
                                                 <DataTemplate x:DataType="x:String">
-                                                    <StackLayout Orientation="Horizontal" Spacing="5">
-                                                        <Label Text="✓" TextColor="Green" FontSize="12" />
-                                                        <Label Text="{Binding .}" FontSize="12" />
+                                                    <StackLayout Orientation="Horizontal" Spacing="8" Margin="10,2">
+                                                        <Label Text="✅" FontSize="12" VerticalOptions="Center" />
+                                                        <Label Text="{Binding .}" 
+                                                               FontSize="12" 
+                                                               TextColor="#495057"
+                                                               VerticalOptions="Center" />
                                                     </StackLayout>
                                                 </DataTemplate>
                                             </CollectionView.ItemTemplate>
                                         </CollectionView>
                                     </StackLayout>
 
+                                    <!-- Botón de activación -->
                                     <Button 
-                                        Text="Activar Plan"
-                                        Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:SuscripcionesPageViewModel}}, Path=ActivarPlanCommand}"
+                                        Text="🚀 Activar Suscripción"
+                                        Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:SuscripcionesPageViewModel}}, Path=ActivarSuscripcionCommand}"
                                         CommandParameter="{Binding .}"
-                                        BackgroundColor="Blue"
+                                        BackgroundColor="#4ECDC4"
                                         TextColor="White"
-                                        CornerRadius="5" />
+                                        CornerRadius="10"
+                                        FontSize="16"
+                                        FontAttributes="Bold"
+                                        HeightRequest="50"
+                                        Margin="0,10,0,0" />
                                 </StackLayout>
                             </Frame>
                         </Grid>
                     </DataTemplate>
                 </CollectionView.ItemTemplate>
             </CollectionView>
+
+            <!-- ✅ BOTÓN DE ACTUALIZAR -->
+            <Button 
+                Text="🔄 Actualizar Suscripciones"
+                Command="{Binding RefreshSuscripcionesCommand}"
+                BackgroundColor="Transparent"
+                TextColor="#4ECDC4"
+                BorderColor="#4ECDC4"
+                BorderWidth="2"
+                CornerRadius="10"
+                FontSize="14"
+                HeightRequest="45"
+                Margin="0,10,0,20" />
 
         </StackLayout>
     </ScrollView>

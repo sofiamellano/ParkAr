@@ -22,7 +22,7 @@ namespace Service.Models
         public Usuario? Usuario { get; set; }
         public Vehiculo? Vehiculo { get; set; }
         public Lugar? Lugar { get; set; }
-        public ICollection<Pago>? Pagos { get; set; }
+
 
         public override string ToString()
         {

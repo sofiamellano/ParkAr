@@ -1,0 +1,77 @@
+﻿@inject FirebaseAuthService _firebaseAuthService
+@inject NavigationManager _navigationManager
+@rendermode InteractiveServer
+
+<div class="top-row ps-3 navbar navbar-dark">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="">Web</a>
+    </div>
+</div>
+
+<input type="checkbox" title="Navigation menu" class="navbar-toggler" />
+
+<div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
+    <nav class="flex-column">
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
+                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Inicio
+            </NavLink>
+        </div>
+
+      @*   @if (_isLogued)
+        {
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="miembros/buscar-libros">
+                    <span class="bi bi-search" aria-hidden="true"></span> Buscar Libros
+                </NavLink>
+            </div>
+        } *@
+
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="login">
+                <span class="bi bi-login" aria-hidden="true"></span> @textBtnLogin
+            </NavLink>
+        </div>
+    </nav>
+</div>
+@code {
+    FirebaseUser _userLogued;
+    bool _isLogued = false;
+    private string textBtnLogin => _isLogued ? "Cerrar sesión" : "Iniciar sesión";
+
+    protected async override Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _firebaseAuthService.OnChangeLogin += LoginChanged;
+            if (await _firebaseAuthService.IsUserAuthenticated())
+            {
+                _userLogued = _firebaseAuthService.CurrentUser;
+                _isLogued = true;
+            }
+            else
+            {
+                _isLogued = false;
+                _userLogued = null;
+                _navigationManager.NavigateTo("/login");
+            }
+        }
+    }
+
+    private async void LoginChanged()
+    {
+        await _firebaseAuthService.IsUserAuthenticated();
+        if (_firebaseAuthService.CurrentUser != null)
+        {
+            _userLogued = _firebaseAuthService.CurrentUser;
+            _isLogued = true;
+        }
+        else
+        {
+            _isLogued = false;
+            _userLogued = null;
+            _navigationManager.NavigateTo("/login");
+        }
+        StateHasChanged();
+    }
+}

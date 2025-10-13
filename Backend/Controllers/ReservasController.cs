@@ -24,7 +24,7 @@ namespace Backend.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Reserva>>> GetReservas([FromQuery] int? usuarioId = null)
         {
-            var query = _context.Reservas.AsNoTracking().Include(r => r.Usuario).Include(r => r.Vehiculo).Include(r => r.Lugar).Include(r => r.Pagos).AsQueryable();
+            var query = _context.Reservas.AsNoTracking().Include(r => r.Usuario).Include(r => r.Vehiculo).Include(r => r.Lugar).AsQueryable();
             if (usuarioId.HasValue)
             {
                 query = query.Where(r => r.UsuarioId == usuarioId.Value);
@@ -35,7 +35,7 @@ namespace Backend.Controllers
         [HttpGet("deleteds")]
         public async Task<ActionResult<IEnumerable<Reserva>>> GetDeletedReservas([FromQuery] int? usuarioId = null)
         {
-            var query = _context.Reservas.AsNoTracking().IgnoreQueryFilters().Where(r => r.IsDeleted).Include(r => r.Usuario).Include(r => r.Vehiculo).Include(r => r.Lugar).Include(r => r.Pagos).AsQueryable();
+            var query = _context.Reservas.AsNoTracking().IgnoreQueryFilters().Where(r => r.IsDeleted).Include(r => r.Usuario).Include(r => r.Vehiculo).Include(r => r.Lugar).AsQueryable();
             if (usuarioId.HasValue)
             {
                 query = query.Where(r => r.UsuarioId == usuarioId.Value);
@@ -46,7 +46,7 @@ namespace Backend.Controllers
         [HttpGet("{id}")]
         public async Task<ActionResult<Reserva>> GetReserva(int id)
         {
-            var reserva = await _context.Reservas.AsNoTracking().Include(r => r.Usuario).Include(r => r.Vehiculo).Include(r => r.Lugar).Include(r => r.Pagos).FirstOrDefaultAsync(r => r.Id == id);
+            var reserva = await _context.Reservas.AsNoTracking().Include(r => r.Usuario).Include(r => r.Vehiculo).Include(r => r.Lugar).FirstOrDefaultAsync(r => r.Id == id);
             if (reserva == null)
             {
                 return NotFound();

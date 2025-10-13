@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
@@ -24,7 +24,7 @@ namespace Backend.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Suscripcion>>> GetSuscripciones([FromQuery] int? usuarioId = null)
         {
-            var query = _context.Suscripciones.AsNoTracking().Include(s => s.Usuario).Include(s => s.Plan).Include(s => s.Pagos).AsQueryable();
+            var query = _context.Suscripciones.AsNoTracking().Include(s => s.Usuario).Include(s => s.Plan).AsQueryable();
             if (usuarioId.HasValue)
             {
                 query = query.Where(s => s.UsuarioId == usuarioId.Value);
@@ -32,10 +32,41 @@ namespace Backend.Controllers
             return await query.ToListAsync();
         }
 
+        [HttpGet("byusuario")]
+        public async Task<ActionResult<List<Suscripcion>>> GetByUsuario([FromQuery] int idusuario)
+        {
+            try
+            {
+                System.Diagnostics.Debug.WriteLine($"[API] Buscando suscripciones para usuario: {idusuario}");
+
+                if (idusuario <= 0)
+                {
+                    return BadRequest("El ID de usuario debe ser mayor que 0");
+                }
+
+                // Incluir Plan en la consulta
+                var suscripciones = await _context.Suscripciones
+                    .Where(s => s.UsuarioId == idusuario && !s.IsDeleted)
+                    .Include(s => s.Plan) // ✅ IMPORTANTE: Incluir Plan
+                    .Include(s => s.Usuario) // Opcional
+                    .OrderByDescending(s => s.FechaInicio)
+                    .ToListAsync();
+
+                System.Diagnostics.Debug.WriteLine($"[API] Suscripciones encontradas: {suscripciones.Count}");
+
+                return Ok(suscripciones);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[API] Error: {ex.Message}");
+                return StatusCode(500, $"Error interno del servidor: {ex.Message}");
+            }
+        }
+
         [HttpGet("deleteds")]
         public async Task<ActionResult<IEnumerable<Suscripcion>>> GetDeletedSuscripciones([FromQuery] int? usuarioId = null)
         {
-            var query = _context.Suscripciones.AsNoTracking().IgnoreQueryFilters().Where(s => s.IsDeleted).Include(s => s.Usuario).Include(s => s.Plan).Include(s => s.Pagos).AsQueryable();
+            var query = _context.Suscripciones.AsNoTracking().IgnoreQueryFilters().Where(s => s.IsDeleted).Include(s => s.Usuario).Include(s => s.Plan).AsQueryable();
             if (usuarioId.HasValue)
             {
                 query = query.Where(s => s.UsuarioId == usuarioId.Value);
@@ -46,7 +77,7 @@ namespace Backend.Controllers
         [HttpGet("{id}")]
         public async Task<ActionResult<Suscripcion>> GetSuscripcion(int id)
         {
-            var suscripcion = await _context.Suscripciones.AsNoTracking().Include(s => s.Usuario).Include(s => s.Plan).Include(s => s.Pagos).FirstOrDefaultAsync(s => s.Id == id);
+            var suscripcion = await _context.Suscripciones.AsNoTracking().Include(s => s.Usuario).Include(s => s.Plan).FirstOrDefaultAsync(s => s.Id == id);
             if (suscripcion == null)
             {
                 return NotFound();

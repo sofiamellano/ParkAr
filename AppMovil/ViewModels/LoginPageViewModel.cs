@@ -83,7 +83,7 @@ public partial class LoginPageViewModel : BaseViewModel
                 }
 
                 // ✅ Navegar a la pestaña inicial
-                await Shell.Current.GoToAsync($"//ReservasPage");
+                await Shell.Current.GoToAsync($"//PerfilPage");
 
                 // Limpiar campos después del login exitoso
                 Email = string.Empty;
