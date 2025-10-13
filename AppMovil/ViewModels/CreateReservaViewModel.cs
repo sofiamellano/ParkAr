@@ -447,9 +447,8 @@ public partial class CreateReservaViewModel : BaseViewModel
         }
     }
 
-    /// <summary>
     /// Valida que no haya conflictos con reservas existentes
-    /// </summary>
+    
     private async Task<(bool esValida, string mensaje)> ValidarConflictosAsync(DateTime fechaHoraInicio, DateTime fechaHoraFin, int? reservaIdExcluir = null)
     {
         try
@@ -506,9 +505,8 @@ public partial class CreateReservaViewModel : BaseViewModel
         }
     }
 
-    /// <summary>
     /// Verifica si dos rangos de tiempo se solapan
-    /// </summary>
+   
     private bool HorariosSesolapan(DateTime inicio1, DateTime fin1, DateTime inicio2, DateTime fin2)
     {
         // Los horarios se solapan si:

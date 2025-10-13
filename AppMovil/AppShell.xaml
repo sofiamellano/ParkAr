@@ -72,15 +72,11 @@
     <ShellContent
         ContentTemplate="{DataTemplate pages:RecuperarPasswordPage}"
         Route="RecuperarPasswordPage" />
-    
+
     <ShellContent
         ContentTemplate="{DataTemplate pages:CreateReservaPage}"
         Route="CreateReservaPage" />
-    
-    <ShellContent
-        ContentTemplate="{DataTemplate pages:PagoPage}"
-        Route="PagoPage" />
-    
+
     <ShellContent
         ContentTemplate="{DataTemplate pages:TicketPage}"
         Route="TicketPage" />

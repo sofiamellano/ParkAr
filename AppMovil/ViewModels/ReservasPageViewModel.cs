@@ -12,7 +12,7 @@ public partial class ReservasPageViewModel : BaseViewModel
     ReservaService _reservaService = new();
 
     [ObservableProperty]
-    private string mensajeVacio = "No tienes reservas activas";
+    private string mensajeVacio = "No tienes reservas";
 
     [ObservableProperty]
     private ObservableCollection<Reserva> reservas = new();
@@ -22,63 +22,13 @@ public partial class ReservasPageViewModel : BaseViewModel
     public IRelayCommand GetAllCommand { get; }
 
     private int _idUserLogin;
-    private System.Timers.Timer? _updateTimer;
 
     public ReservasPageViewModel()
     {
         Title = "Mis Reservas";
         GetAllCommand = new RelayCommand(OnGetAll);
         _idUserLogin = Preferences.Get("UserLoginId", 0);
-        
-        // ✅ CONFIGURAR TIMER PARA AUTO-ACTUALIZACIÓN
-        SetupAutoRefreshTimer();
-        
         _ = InicializeAsync();
-    }
-
-    private void SetupAutoRefreshTimer()
-    {
-        // Timer que se ejecuta cada 60 segundos para verificar reservas expiradas
-        _updateTimer = new System.Timers.Timer(60000); // 60 segundos
-        _updateTimer.Elapsed += async (sender, e) =>
-        {
-            // Verificar si hay reservas que hayan expirado
-            await CheckAndRemoveExpiredReservations();
-        };
-        _updateTimer.AutoReset = true;
-        _updateTimer.Enabled = true;
-    }
-
-    private async Task CheckAndRemoveExpiredReservations()
-    {
-        try
-        {
-            var now = DateTime.Now;
-            var reservasExpiradas = Reservas.Where(r => r.FechaFin <= now).ToList();
-            
-            if (reservasExpiradas.Any())
-            {
-                // Remover reservas expiradas de la UI
-                foreach (var reservaExpirada in reservasExpiradas)
-                {
-                    Reservas.Remove(reservaExpirada);
-                    System.Diagnostics.Debug.WriteLine($"[AUTO-CLEANUP] Reserva expirada removida: Plaza {reservaExpirada.Lugar?.Numero}, Fin: {reservaExpirada.FechaFin}");
-                }
-                
-                OnPropertyChanged(nameof(TieneReservas));
-                
-                // Actualizar mensaje si no quedan reservas
-                if (!Reservas.Any())
-                {
-                    MensajeVacio = "Aún no tienes reservas activas. ¡Crea tu primera reserva!";
-                    OnPropertyChanged(nameof(MensajeVacio));
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"[ERROR] Auto-cleanup failed: {ex.Message}");
-        }
     }
 
     private async Task InicializeAsync()
@@ -109,24 +59,21 @@ public partial class ReservasPageViewModel : BaseViewModel
 
             var reservasList = await _reservaService.GetByUsuarioAsync(_idUserLogin);
             
-            // ✅ FILTRAR SOLO RESERVAS ACTIVAS Y FUTURAS
-            var reservasActivas = reservasList?.Where(r => 
-                r.EstadoReserva == EstadoReservaEnum.Activa && 
-                !r.IsDeleted &&
-                r.FechaFin > DateTime.Now // Solo reservas que no han terminado
-            ).OrderBy(r => r.FechaInicio) // Ordenar por fecha de inicio
-            .ToList() ?? new List<Reserva>();
+            // ✅ MOSTRAR TODAS LAS RESERVAS (activas, canceladas, finalizadas)
+            // Solo filtrar las que no están eliminadas (IsDeleted = false)
+            var todasLasReservas = reservasList?.Where(r => !r.IsDeleted)
+                .OrderByDescending(r => r.FechaInicio) // Ordenar por fecha de inicio (más recientes primero)
+                .ToList() ?? new List<Reserva>();
             
-            // DEBUG: Mostrar cuántas reservas se encontraron después del filtro
-            System.Diagnostics.Debug.WriteLine($"[DEBUG] Total reservas obtenidas: {reservasList?.Count ?? 0}");
-            System.Diagnostics.Debug.WriteLine($"[DEBUG] Reservas activas y futuras: {reservasActivas.Count}");
+            // DEBUG: Mostrar cuántas reservas se encontraron
+            System.Diagnostics.Debug.WriteLine($"[DEBUG] Total reservas encontradas: {todasLasReservas.Count}");
             
-            reservas = new ObservableCollection<Reserva>(reservasActivas);
+            reservas = new ObservableCollection<Reserva>(todasLasReservas);
             
             // Actualizar mensaje si no hay reservas
             if (!reservas.Any())
             {
-                MensajeVacio = "Aún no tienes reservas activas. ¡Crea tu primera reserva!";
+                MensajeVacio = "Aún no tienes reservas. ¡Crea tu primera reserva!";
             }
             
             OnPropertyChanged(nameof(Reservas));
@@ -144,11 +91,10 @@ public partial class ReservasPageViewModel : BaseViewModel
             // DEBUG: Mostrar el error completo
             System.Diagnostics.Debug.WriteLine($"[DEBUG] Exception: {ex.Message}");
             
-            // Para usuarios de Firebase, es normal que no existan reservas inicialmente
-            // No mostrar error si es porque el usuario no tiene reservas (común para usuarios nuevos)
+            // Para usuarios nuevos, es normal que no existan reservas inicialmente
             if (ex.Message.Contains("NotFound") || ex.Message.Contains("BadRequest"))
             {
-                MensajeVacio = "Aún no tienes reservas activas. ¡Crea tu primera reserva!";
+                MensajeVacio = "Aún no tienes reservas. ¡Crea tu primera reserva!";
                 reservas = new ObservableCollection<Reserva>();
                 OnPropertyChanged(nameof(Reservas));
                 OnPropertyChanged(nameof(TieneReservas));
@@ -189,6 +135,21 @@ public partial class ReservasPageViewModel : BaseViewModel
     private async Task EditReserva(Reserva reserva)
     {
         if (reserva == null) return;
+
+        // ✅ VALIDAR QUE SOLO SE PUEDAN EDITAR RESERVAS ACTIVAS Y FUTURAS
+        if (reserva.EstadoReserva != EstadoReservaEnum.Activa)
+        {
+            await Shell.Current.DisplayAlert("No disponible", 
+                "Solo se pueden modificar reservas activas.", "OK");
+            return;
+        }
+
+        if (reserva.FechaInicio <= DateTime.Now)
+        {
+            await Shell.Current.DisplayAlert("No disponible", 
+                "No se pueden modificar reservas que ya han comenzado.", "OK");
+            return;
+        }
         
         try
         {
@@ -211,6 +172,14 @@ public partial class ReservasPageViewModel : BaseViewModel
     {
         if (reserva == null) return;
 
+        // ✅ VALIDAR QUE SOLO SE PUEDAN CANCELAR RESERVAS ACTIVAS
+        if (reserva.EstadoReserva != EstadoReservaEnum.Activa)
+        {
+            await Shell.Current.DisplayAlert("No disponible", 
+                "Solo se pueden cancelar reservas activas.", "OK");
+            return;
+        }
+
         var lugarTexto = reserva.Lugar?.ToString() ?? "Plaza N/A";
         var result = await Shell.Current.DisplayAlert("Cancelar Reserva", 
             $"¿Está seguro de cancelar la reserva en {lugarTexto}?", "Sí", "No");
@@ -227,14 +196,10 @@ public partial class ReservasPageViewModel : BaseViewModel
                 
                 if (success)
                 {
-                    // ✅ REMOVER DE LA LISTA INMEDIATAMENTE
-                    Reservas.Remove(reserva);
-                    OnPropertyChanged(nameof(TieneReservas));
-                    
                     await Shell.Current.DisplayAlert("✅ Reserva Cancelada", 
                         $"La reserva en {lugarTexto} ha sido cancelada exitosamente", "OK");
                     
-                    // ✅ RECARGAR TODAS LAS RESERVAS PARA ASEGURAR CONSISTENCIA
+                    // ✅ RECARGAR TODAS LAS RESERVAS PARA MOSTRAR EL CAMBIO DE ESTADO
                     OnGetAll();
                 }
                 else
@@ -256,8 +221,26 @@ public partial class ReservasPageViewModel : BaseViewModel
     [RelayCommand]
     private async Task ViewTicket(Reserva reserva)
     {
-        if (reserva == null) return;
-        await Shell.Current.GoToAsync($"TicketPage?reservaId={reserva.Id}");
+        if (reserva == null) 
+        {
+            await Shell.Current.DisplayAlert("Error", "No se pudo obtener la información de la reserva", "OK");
+            return;
+        }
+
+        try
+        {
+            System.Diagnostics.Debug.WriteLine($"[DEBUG] Navegando a TicketPage con reservaId: {reserva.Id}");
+            
+            // ✅ CORRECCIÓN: Agregar la ruta y el parámetro
+            await Shell.Current.GoToAsync($"///TicketPage?reservaId={reserva.Id}");
+            
+            System.Diagnostics.Debug.WriteLine("[DEBUG] Navegación exitosa a TicketPage");
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[DEBUG] Error al navegar a TicketPage: {ex.Message}");
+            await Shell.Current.DisplayAlert("Error", $"No se pudo abrir el ticket: {ex.Message}", "OK");
+        }
     }
 
     public override async Task OnAppearingAsync()
@@ -266,23 +249,10 @@ public partial class ReservasPageViewModel : BaseViewModel
         _idUserLogin = Preferences.Get("UserLoginId", 0);
         System.Diagnostics.Debug.WriteLine($"[DEBUG] OnAppearingAsync - UserLoginId actualizado: {_idUserLogin}");
         
-        // Siempre recargar las reservas cuando la página aparece (incluso después de crear una nueva)
+        // Siempre recargar las reservas cuando la página aparece
         OnGetAll();
         
         await base.OnAppearingAsync();
-    }
-
-    public override async Task OnDisappearingAsync()
-    {
-        // Limpiar timer cuando la página desaparece
-        _updateTimer?.Stop();
-        await base.OnDisappearingAsync();
-    }
-
-    // Método para limpiar recursos
-    protected virtual void Dispose()
-    {
-        _updateTimer?.Dispose();
     }
 }
 

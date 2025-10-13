@@ -26,7 +26,6 @@ namespace AppMovil
             builder.Services.AddTransient<LoginPageViewModel>();
             builder.Services.AddTransient<RegisterPageViewModel>();
             builder.Services.AddTransient<ReservasPageViewModel>();
-            builder.Services.AddTransient<PagoPageViewModel>();
             builder.Services.AddTransient<SuscripcionesPageViewModel>();
             builder.Services.AddTransient<HistorialPageViewModel>();
             builder.Services.AddTransient<TicketPageViewModel>();
@@ -37,7 +36,6 @@ namespace AppMovil
             builder.Services.AddTransient<LoginPage>();
             builder.Services.AddTransient<RegisterPage>();
             builder.Services.AddTransient<ReservasPage>();
-            builder.Services.AddTransient<PagoPage>();
             builder.Services.AddTransient<SuscripcionesPage>();
             builder.Services.AddTransient<HistorialPage>();
             builder.Services.AddTransient<TicketPage>();

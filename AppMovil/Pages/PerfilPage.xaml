@@ -4,15 +4,24 @@
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:viewmodels="clr-namespace:AppMovil.ViewModels"
+    xmlns:models="clr-namespace:Service.Models;assembly=Service"
+    xmlns:converters="clr-namespace:AppMovil.Converters"
     Title="{Binding Title}"
     x:DataType="viewmodels:PerfilPageViewModel">
+
+    <ContentPage.Resources>
+        <ResourceDictionary>
+            <converters:InvertedBoolConverter x:Key="InvertedBoolConverter" />
+        </ResourceDictionary>
+    </ContentPage.Resources>
 
     <ScrollView>
         <StackLayout Padding="20" Spacing="20">
 
-            <Frame BackgroundColor="Blue" BorderColor="Transparent" CornerRadius="15" Padding="20">
+            <!-- ✅ PERFIL DEL USUARIO -->
+            <Frame BackgroundColor="#4ECDC4" BorderColor="Transparent" CornerRadius="15" Padding="20" HasShadow="True">
                 <StackLayout Spacing="10">
-                    <Label Text="Usuario" FontSize="48" HorizontalOptions="Center" TextColor="White" />
+                    <Label Text="👤" FontSize="48" HorizontalOptions="Center" TextColor="White" />
                     <Label 
                         Text="{Binding NombreUsuario}" 
                         FontSize="20" 
@@ -27,97 +36,157 @@
                 </StackLayout>
             </Frame>
 
-            <StackLayout x:Name="LoginSection" Spacing="10" IsVisible="{Binding IsLoggedIn, Converter={StaticResource InvertedBoolConverter}}">
-                <Label Text="Acceso" FontSize="18" FontAttributes="Bold" />
-                
-                <Button 
-                    Text="Iniciar Sesion"
-                    Command="{Binding GoToLoginCommand}"
-                    BackgroundColor="Green"
-                    TextColor="White"
-                    CornerRadius="8"
-                    HeightRequest="50" />
+            <!-- ✅ INDICADOR DE CARGA -->
+            <ActivityIndicator IsRunning="{Binding IsBusy}"
+                              IsVisible="{Binding IsBusy}"
+                              Color="#4ECDC4"
+                              HeightRequest="40" />
 
-                <Button 
-                    Text="Registrarse"
-                    Command="{Binding GoToRegisterCommand}"
-                    BackgroundColor="Blue"
-                    TextColor="White"
-                    CornerRadius="8"
-                    HeightRequest="50" />
+            <!-- ✅ SECCIÓN DE VEHÍCULOS -->
+            <StackLayout Spacing="15">
+                <StackLayout Orientation="Horizontal">
+                    <Label Text="🚗 Mis Vehículos" FontSize="18" FontAttributes="Bold" VerticalOptions="Center" />
+                    <Button Text="+"
+                            Command="{Binding AgregarVehiculoCommand}"
+                            BackgroundColor="#27AE60"
+                            TextColor="White"
+                            WidthRequest="40"
+                            HeightRequest="40"
+                            CornerRadius="20"
+                            FontSize="20"
+                            FontAttributes="Bold"/>
+                </StackLayout>
+
+                <!-- Lista de vehículos o mensaje vacío -->
+                <StackLayout IsVisible="{Binding TieneVehiculos}">
+                    <CollectionView ItemsSource="{Binding VehiculosUsuario}">
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate x:DataType="models:Vehiculo">
+                                <Grid Padding="0" Margin="0,5">
+                                    <Frame BackgroundColor="White" 
+                                           BorderColor="LightGray" 
+                                           CornerRadius="10"
+                                           HasShadow="True"
+                                           Padding="15">
+                                        <Grid ColumnDefinitions="*,Auto">
+                                            <StackLayout Grid.Column="0" Spacing="5">
+                                                <Label Text="{Binding Patente}" 
+                                                       FontSize="16" 
+                                                       FontAttributes="Bold"
+                                                       TextColor="#2C3E50" />
+                                                <Label Text="{Binding TipoVehiculo}" 
+                                                       FontSize="14"
+                                                       TextColor="#7F8C8D" />
+                                            </StackLayout>
+                                            
+                                            <Button Grid.Column="1"
+                                                    Text="⚙️"
+                                                    Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:PerfilPageViewModel}}, Path=EditarVehiculoCommand}"
+                                                    CommandParameter="{Binding .}"
+                                                    BackgroundColor="Transparent"
+                                                    TextColor="#3498DB"
+                                                    FontSize="18"
+                                                    WidthRequest="40"
+                                                    HeightRequest="40" />
+                                        </Grid>
+                                    </Frame>
+                                </Grid>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                </StackLayout>
+
+                <!-- Mensaje cuando no hay vehículos -->
+                <Frame IsVisible="{Binding TieneVehiculos, Converter={StaticResource InvertedBoolConverter}}"
+                       BackgroundColor="#F8F9FA"
+                       BorderColor="#DEE2E6"
+                       CornerRadius="10"
+                       Padding="20">
+                    <StackLayout HorizontalOptions="Center" Spacing="10">
+                        <Label Text="🚗" FontSize="32" HorizontalOptions="Center" TextColor="#6C757D" />
+                        <Label Text="No tienes vehículos registrados" 
+                               FontSize="16" 
+                               TextColor="#495057"
+                               HorizontalOptions="Center"
+                               HorizontalTextAlignment="Center" />
+                        <Label Text="Agrega tu primer vehículo para poder hacer reservas" 
+                               FontSize="12" 
+                               TextColor="#6C757D"
+                               HorizontalOptions="Center"
+                               HorizontalTextAlignment="Center" />
+                    </StackLayout>
+                </Frame>
             </StackLayout>
 
+            <!-- ✅ SECCIÓN MI CUENTA -->
             <StackLayout Spacing="15">
-                <Label Text="Mi Cuenta" FontSize="18" FontAttributes="Bold" />
+                <Label Text="👤 Mi Cuenta" FontSize="18" FontAttributes="Bold" />
 
                 <Frame BackgroundColor="White" BorderColor="LightGray" CornerRadius="10" HasShadow="True" Padding="0">
                     <StackLayout Spacing="0">
                         <Button 
-                            Text="Editar Perfil"
+                            Text="📝 Editar Perfil"
                             Command="{Binding EditProfileCommand}"
                             BackgroundColor="Transparent"
-                            TextColor="Black"
+                            TextColor="#2C3E50"
                             BorderWidth="0"
-                            HorizontalOptions="FillAndExpand"
-                            HeightRequest="50" />
+                            HeightRequest="50"
+                            FontSize="16" />
                         
                         <BoxView BackgroundColor="LightGray" HeightRequest="1" />
                         
                         <Button 
-                            Text="Cambiar Contrasena"
+                            Text="🔒 Cambiar Contraseña"
                             Command="{Binding ChangePasswordCommand}"
                             BackgroundColor="Transparent"
-                            TextColor="Black"
+                            TextColor="#2C3E50"
                             BorderWidth="0"
-                            HorizontalOptions="FillAndExpand"
-                            HeightRequest="50" />
+                            HeightRequest="50"
+                            FontSize="16" />
                     </StackLayout>
                 </Frame>
+            </StackLayout>
 
-                <Frame BackgroundColor="White" BorderColor="LightGray" CornerRadius="10" HasShadow="True" Padding="0">
-                    <Button 
-                        Text="Ver Mis Tickets"
-                        Command="{Binding GoToTicketCommand}"
-                        BackgroundColor="Transparent"
-                        TextColor="Black"
-                        BorderWidth="0"
-                        HorizontalOptions="FillAndExpand"
-                        HeightRequest="50" />
-                </Frame>
+            <!-- ✅ SECCIÓN CONFIGURACIÓN Y AYUDA -->
+            <StackLayout Spacing="15">
+                <Label Text="⚙️ Configuración" FontSize="18" FontAttributes="Bold" />
 
                 <Frame BackgroundColor="White" BorderColor="LightGray" CornerRadius="10" HasShadow="True" Padding="0">
                     <StackLayout Spacing="0">
                         <Button 
-                            Text="Configuracion"
+                            Text="🔧 Configuración"
                             Command="{Binding ShowSettingsCommand}"
                             BackgroundColor="Transparent"
-                            TextColor="Black"
+                            TextColor="#2C3E50"
                             BorderWidth="0"
-                            HorizontalOptions="FillAndExpand"
-                            HeightRequest="50" />
+                            HeightRequest="50"
+                            FontSize="16" />
                         
                         <BoxView BackgroundColor="LightGray" HeightRequest="1" />
                         
                         <Button 
-                            Text="Ayuda y Soporte"
+                            Text="❓ Ayuda y Soporte"
                             Command="{Binding ShowHelpCommand}"
                             BackgroundColor="Transparent"
-                            TextColor="Black"
+                            TextColor="#2C3E50"
                             BorderWidth="0"
-                            HorizontalOptions="FillAndExpand"
-                            HeightRequest="50" />
+                            HeightRequest="50"
+                            FontSize="16" />
                     </StackLayout>
                 </Frame>
-
-                <Button 
-                    Text="Cerrar Sesion"
-                    Command="{Binding LogoutCommand}"
-                    BackgroundColor="Red"
-                    TextColor="White"
-                    CornerRadius="8"
-                    HeightRequest="50"
-                    Margin="0,20,0,0" />
             </StackLayout>
+
+            <!-- ✅ BOTÓN CERRAR SESIÓN -->
+            <Button 
+                Text="🚪 Cerrar Sesión"
+                Command="{Binding LogoutCommand}"
+                BackgroundColor="#E74C3C"
+                TextColor="White"
+                CornerRadius="10"
+                HeightRequest="50"
+                FontSize="16"
+                FontAttributes="Bold"
+                Margin="0,20,0,0" />
 
         </StackLayout>
     </ScrollView>

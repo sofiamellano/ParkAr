@@ -4,6 +4,12 @@ namespace AppMovil.Pages;
 
 public partial class TicketPage : ContentPage
 {
+    public TicketPage()
+    {
+        InitializeComponent();
+        BindingContext = new TicketPageViewModel();
+    }
+
     public TicketPage(TicketPageViewModel viewModel)
     {
         InitializeComponent();

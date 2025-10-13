@@ -1,138 +1,190 @@
-using CommunityToolkit.Mvvm.ComponentModel;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Service.Enums;
+using Service.Models;
+using Service.Services;
 using System.Collections.ObjectModel;
 
 namespace AppMovil.ViewModels;
 
 public partial class HistorialPageViewModel : BaseViewModel
 {
-    [ObservableProperty]
-    private ObservableCollection<HistorialItem> historialReservas = new();
+    private readonly ReservaService _reservaService = new();
+    private int _idUserLogin;
 
     [ObservableProperty]
-    private ObservableCollection<HistorialItem> historialPagos = new();
+    private string mensajeVacio = "No tienes reservas en el historial";
 
     [ObservableProperty]
-    private string selectedTab = "Reservas";
+    private ObservableCollection<Reserva> historialReservas = new();
 
-    [ObservableProperty]
-    private bool isReservasTabSelected = true;
-
-    [ObservableProperty]
-    private bool isPagosTabSelected = false;
+    public bool TieneHistorial => HistorialReservas?.Count > 0;
 
     public HistorialPageViewModel()
     {
         Title = "Historial";
-        LoadHistorial();
+        _idUserLogin = Preferences.Get("UserLoginId", 0);
+        _ = InicializeAsync();
     }
 
-    private void LoadHistorial()
+    private async Task InicializeAsync()
     {
-        // Simular historial de reservas
-        HistorialReservas = new ObservableCollection<HistorialItem>
+        await OnGetAll();
+    }
+
+    private async Task OnGetAll()
+    {
+        if (IsBusy) return;
+
+        try
         {
-            new HistorialItem 
-            { 
-                Id = 1,
-                Titulo = "Parking Centro - Plaza 12",
-                Fecha = DateTime.Now.AddDays(-2),
-                Descripcion = "Reserva completada",
-                Estado = "Finalizada",
-                Monto = "$500"
-            },
-            new HistorialItem 
-            { 
-                Id = 2,
-                Titulo = "Parking Norte - Plaza 8",
-                Fecha = DateTime.Now.AddDays(-7),
-                Descripcion = "Reserva cancelada por el usuario",
-                Estado = "Cancelada",
-                Monto = "$300"
-            },
-            new HistorialItem 
-            { 
-                Id = 3,
-                Titulo = "Parking Sur - Plaza 15",
-                Fecha = DateTime.Now.AddDays(-15),
-                Descripcion = "Reserva completada",
-                Estado = "Finalizada",
-                Monto = "$450"
-            }
-        };
+            IsBusy = true;
 
-        // Simular historial de pagos
-        HistorialPagos = new ObservableCollection<HistorialItem>
+            // Verificar si el usuario está logueado
+            if (_idUserLogin <= 0)
+            {
+                MensajeVacio = "Debes iniciar sesión para ver tu historial";
+                HistorialReservas = new ObservableCollection<Reserva>();
+                OnPropertyChanged(nameof(TieneHistorial));
+                return;
+            }
+
+            System.Diagnostics.Debug.WriteLine($"[DEBUG] Cargando historial para UserLoginId: {_idUserLogin}");
+
+            // Obtener todas las reservas del usuario
+            var todasLasReservas = await _reservaService.GetByUsuarioAsync(_idUserLogin);
+
+            // Filtrar solo reservas no activas (canceladas, finalizadas, o activas que ya terminaron)
+            var reservasHistorial = todasLasReservas?.Where(r => 
+                !r.IsDeleted && 
+                (r.EstadoReserva == EstadoReservaEnum.Cancelada || 
+                 r.EstadoReserva == EstadoReservaEnum.Finalizada ||
+                 (r.EstadoReserva == EstadoReservaEnum.Activa && r.FechaFin <= DateTime.Now))
+            ).OrderByDescending(r => r.FechaInicio) // Ordenar por fecha más reciente primero
+            .ToList() ?? new List<Reserva>();
+
+            System.Diagnostics.Debug.WriteLine($"[DEBUG] Reservas en historial encontradas: {reservasHistorial.Count}");
+
+            HistorialReservas = new ObservableCollection<Reserva>(reservasHistorial);
+            OnPropertyChanged(nameof(TieneHistorial));
+
+            // Actualizar mensaje si no hay historial
+            if (!TieneHistorial)
+            {
+                MensajeVacio = "No tienes reservas finalizadas o canceladas";
+            }
+        }
+        catch (Exception ex)
         {
-            new HistorialItem 
-            { 
-                Id = 4,
-                Titulo = "Pago Plan Premium",
-                Fecha = DateTime.Now.AddDays(-1),
-                Descripcion = "Renovaci�n mensual",
-                Estado = "Completado",
-                Monto = "$1,500"
-            },
-            new HistorialItem 
-            { 
-                Id = 5,
-                Titulo = "Pago Reserva",
-                Fecha = DateTime.Now.AddDays(-2),
-                Descripcion = "Parking Centro - Plaza 12",
-                Estado = "Completado",
-                Monto = "$500"
-            },
-            new HistorialItem 
-            { 
-                Id = 6,
-                Titulo = "Reembolso",
-                Fecha = DateTime.Now.AddDays(-7),
-                Descripcion = "Cancelaci�n reserva",
-                Estado = "Procesado",
-                Monto = "-$300"
+            System.Diagnostics.Debug.WriteLine($"[DEBUG] Error al cargar historial: {ex.Message}");
+            MensajeVacio = "Error al cargar el historial";
+            HistorialReservas = new ObservableCollection<Reserva>();
+            OnPropertyChanged(nameof(TieneHistorial));
+            
+            // Solo mostrar alert para errores graves, no para casos normales
+            if (!ex.Message.Contains("NotFound") && !ex.Message.Contains("BadRequest"))
+            {
+                await Shell.Current.DisplayAlert("Error", $"No se pudo cargar el historial: {ex.Message}", "OK");
             }
-        };
+        }
+        finally
+        {
+            IsBusy = false;
+        }
     }
 
     [RelayCommand]
-    private void SelectReservasTab()
+    private async Task ViewDetails(Reserva reserva)
     {
-        SelectedTab = "Reservas";
-        IsReservasTabSelected = true;
-        IsPagosTabSelected = false;
+        if (reserva == null) return;
+
+        try
+        {
+            // Calcular duración
+            var duracion = reserva.FechaFin - reserva.FechaInicio;
+            var duracionTexto = $"{duracion.Hours}h {duracion.Minutes}m";
+
+            // Obtener información de manera segura
+            var lugarTexto = reserva.Lugar?.ToString() ?? $"Plaza {reserva.LugarId}";
+            var vehiculoTexto = reserva.Vehiculo?.ToString() ?? $"Vehículo ID {reserva.VehiculoId}";
+
+            // Determinar estado y color para mostrar
+            string estadoTexto, estadoIcono, estadoColor;
+            
+            if (reserva.EstadoReserva == EstadoReservaEnum.Cancelada)
+            {
+                estadoTexto = "CANCELADA";
+                estadoIcono = "❌";
+                estadoColor = "#E74C3C"; // Rojo
+            }
+            else if (reserva.EstadoReserva == EstadoReservaEnum.Finalizada)
+            {
+                estadoTexto = "FINALIZADA";
+                estadoIcono = "✅";
+                estadoColor = "#27AE60"; // Verde
+            }
+            else if (reserva.EstadoReserva == EstadoReservaEnum.Activa && reserva.FechaFin <= DateTime.Now)
+            {
+                estadoTexto = "COMPLETADA";
+                estadoIcono = "✅";
+                estadoColor = "#27AE60"; // Verde
+            }
+            else
+            {
+                estadoTexto = "FINALIZADA";
+                estadoIcono = "✅";
+                estadoColor = "#27AE60"; // Verde
+            }
+
+            // Crear mensaje con formato mejorado
+            var mensaje = $"🎫 DETALLES DE LA RESERVA\n\n" +
+                         $"🅿️ LUGAR\n" +
+                         $"   {lugarTexto}\n\n" +
+                         $"🚗 VEHÍCULO\n" +
+                         $"   {vehiculoTexto}\n\n" +
+                         $"📅 FECHA Y HORARIO\n" +
+                         $"   🕐 Inicio: {reserva.FechaInicio:dd/MM/yyyy HH:mm}\n" +
+                         $"   🕔 Fin: {reserva.FechaFin:dd/MM/yyyy HH:mm}\n" +
+                         $"   ⏱️ Duración: {duracionTexto}\n\n" +
+                         $"📊 ESTADO\n" +
+                         $"   {estadoIcono} {estadoTexto}\n\n" +
+                         $"📋 INFORMACIÓN ADICIONAL\n" +
+                         $"   🆔 ID Reserva: {reserva.Id}\n" +
+                         $"   📝 Creada: {reserva.FechaInicio:dd/MM/yyyy}";
+
+            // Mostrar modal con botones personalizados según el estado
+            if (reserva.EstadoReserva == EstadoReservaEnum.Cancelada)
+            {
+                await Shell.Current.DisplayAlert("📋 Reserva Cancelada", mensaje, "Entendido");
+            }
+            else
+            {
+                var result = await Shell.Current.DisplayAlert("📋 Detalles de Reserva", mensaje, "Ver Ticket", "Cerrar");
+                
+                if (result)
+                {
+                    // Si el usuario quiere ver el ticket, navegar al TicketPage
+                    await Shell.Current.GoToAsync($"///TicketPage?reservaId={reserva.Id}");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[DEBUG] Error al mostrar detalles: {ex.Message}");
+            await Shell.Current.DisplayAlert("Error", "No se pudieron cargar los detalles de la reserva", "OK");
+        }
     }
 
     [RelayCommand]
-    private void SelectPagosTab()
+    private async Task RefreshHistorial()
     {
-        SelectedTab = "Pagos";
-        IsReservasTabSelected = false;
-        IsPagosTabSelected = true;
-    }
-
-    [RelayCommand]
-    private async Task ViewDetails(HistorialItem item)
-    {
-        if (item == null) return;
-
-        await Shell.Current.DisplayAlert("Detalles", 
-            $"T�tulo: {item.Titulo}\nFecha: {item.Fecha:dd/MM/yyyy}\nDescripci�n: {item.Descripcion}\nEstado: {item.Estado}\nMonto: {item.Monto}", 
-            "OK");
+        await OnGetAll();
     }
 
     public override async Task OnAppearingAsync()
     {
-        LoadHistorial();
+        // Recargar historial cuando la página aparece
+        await OnGetAll();
         await base.OnAppearingAsync();
     }
-}
-
-public class HistorialItem
-{
-    public int Id { get; set; }
-    public string Titulo { get; set; } = string.Empty;
-    public DateTime Fecha { get; set; }
-    public string Descripcion { get; set; } = string.Empty;
-    public string Estado { get; set; } = string.Empty;
-    public string Monto { get; set; } = string.Empty;
 }

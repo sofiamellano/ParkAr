@@ -13,16 +13,20 @@
         <ResourceDictionary>
             <!-- Convertidor para invertir booleanos -->
             <converters:InvertedBoolConverter x:Key="InvertedBoolConverter" />
+            
+            <!-- ✅ NUEVOS CONVERTIDORES PARA COLORES SEGÚN ESTADO -->
+            <converters:EstadoReservaToColorConverter x:Key="EstadoReservaToColorConverter" />
+            <converters:EstadoReservaToBackgroundConverter x:Key="EstadoReservaToBackgroundConverter" />
         </ResourceDictionary>
     </ContentPage.Resources>
     <ScrollView>
-        <Grid>
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="*" />
-            </Grid.RowDefinitions>
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
 
-            <Button 
+        <Button 
             Grid.Row="0"
             Text="+ Nueva Reserva"
             Command="{Binding CreateReservaCommand}"
@@ -31,35 +35,53 @@
             CornerRadius="5"
             Margin="20,10" />
 
-            <StackLayout Grid.Row="1" IsVisible="{Binding TieneReservas}">
-                <CollectionView ItemsSource="{Binding Reservas}" Margin="20,0">
-                    <CollectionView.ItemTemplate>
-                        <DataTemplate x:DataType="models:Reserva">
-                            <Grid Padding="15" Margin="0,5">
-                                <Frame BackgroundColor="White" 
+        <StackLayout Grid.Row="1" IsVisible="{Binding TieneReservas}">
+            <CollectionView ItemsSource="{Binding Reservas}" Margin="20,0">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="models:Reserva">
+                        <Grid Padding="15" Margin="0,5">
+                            <!-- ✅ FRAME CON COLOR DE FONDO DINÁMICO SEGÚN ESTADO -->
+                            <Frame BackgroundColor="{Binding EstadoReserva, Converter={StaticResource EstadoReservaToBackgroundConverter}}" 
                                    BorderColor="LightGray" 
                                    CornerRadius="10"
                                    HasShadow="True">
-                                    <StackLayout Spacing="10">
-                                        <Label 
+                                <StackLayout Spacing="10">
+                                    <!-- ✅ TÍTULO CON COLOR DINÁMICO -->
+                                    <Label 
                                         Text="{Binding Lugar.Numero, StringFormat='Plaza {0}'}" 
                                         FontSize="16" 
-                                        FontAttributes="Bold" />
+                                        FontAttributes="Bold"
+                                        TextColor="{Binding EstadoReserva, Converter={StaticResource EstadoReservaToColorConverter}}" />
+                                    
+                                    <!-- ✅ FECHA CON COLOR DINÁMICO -->
+                                    <StackLayout Orientation="Horizontal">
+                                        <Label Text="Fecha:" 
+                                               FontSize="14" 
+                                               TextColor="{Binding EstadoReserva, Converter={StaticResource EstadoReservaToColorConverter}}" />
+                                        <Label Text="{Binding FechaInicio, StringFormat='{0:dd/MM/yyyy}'}" 
+                                               FontSize="14" 
+                                               TextColor="{Binding EstadoReserva, Converter={StaticResource EstadoReservaToColorConverter}}" />
+                                        <Label Text="Hora:" 
+                                               FontSize="14" 
+                                               TextColor="{Binding EstadoReserva, Converter={StaticResource EstadoReservaToColorConverter}}" />
+                                        <Label Text="{Binding FechaInicio, StringFormat='{0:HH:mm}'}" 
+                                               FontSize="14" 
+                                               TextColor="{Binding EstadoReserva, Converter={StaticResource EstadoReservaToColorConverter}}" />
+                                    </StackLayout>
 
-                                        <StackLayout Orientation="Horizontal">
-                                            <Label Text="Fecha:" FontSize="14" />
-                                            <Label Text="{Binding FechaInicio, StringFormat='{0:dd/MM/yyyy}'}" FontSize="14" />
-                                            <Label Text="Hora:" FontSize="14" />
-                                            <Label Text="{Binding FechaInicio, StringFormat='{0:HH:mm}'}" FontSize="14" />
-                                        </StackLayout>
+                                    <!-- ✅ ESTADO CON COLOR MÁS DESTACADO -->
+                                    <StackLayout Orientation="Horizontal">
+                                        <Label Text="Estado:" 
+                                               FontSize="12" 
+                                               TextColor="{Binding EstadoReserva, Converter={StaticResource EstadoReservaToColorConverter}}" />
+                                        <Label Text="{Binding EstadoReserva}" 
+                                               FontSize="12" 
+                                               FontAttributes="Bold" 
+                                               TextColor="{Binding EstadoReserva, Converter={StaticResource EstadoReservaToColorConverter}}" />
+                                    </StackLayout>
 
-                                        <StackLayout Orientation="Horizontal">
-                                            <Label Text="Estado:" FontSize="12" />
-                                            <Label Text="{Binding EstadoReserva}" FontSize="12" FontAttributes="Bold" />
-                                        </StackLayout>
-
-                                        <StackLayout Orientation="Horizontal" Spacing="10" Margin="0,10,0,0">
-                                            <Button 
+                                    <StackLayout Orientation="Horizontal" Spacing="10" Margin="0,10,0,0">
+                                        <Button 
                                             Text="Ver Ticket" 
                                             Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:ReservasPageViewModel}}, Path=ViewTicketCommand}"
                                             CommandParameter="{Binding .}"
@@ -67,8 +89,8 @@
                                             TextColor="White"
                                             FontSize="12"
                                             CornerRadius="5"/>
-
-                                            <Button 
+                                        
+                                        <Button 
                                             Text="Modificar" 
                                             Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:ReservasPageViewModel}}, Path=EditReservaCommand}"
                                             CommandParameter="{Binding .}"
@@ -76,8 +98,8 @@
                                             TextColor="White"
                                             FontSize="12"
                                             CornerRadius="5"/>
-
-                                            <Button 
+                                        
+                                        <Button 
                                             Text="Cancelar" 
                                             Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:ReservasPageViewModel}}, Path=CancelReservaCommand}"
                                             CommandParameter="{Binding .}"
@@ -85,34 +107,33 @@
                                             TextColor="White"
                                             FontSize="12"
                                             CornerRadius="5" />
-                                        </StackLayout>
                                     </StackLayout>
-                                </Frame>
-                            </Grid>
-                        </DataTemplate>
-                    </CollectionView.ItemTemplate>
-                </CollectionView>
-            </StackLayout>
+                                </StackLayout>
+                            </Frame>
+                        </Grid>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+        </StackLayout>
 
-            <StackLayout Grid.Row="1" 
+        <StackLayout Grid.Row="1" 
                      x:Name="EmptyStateLayout"
                      IsVisible="{Binding TieneReservas, Converter={StaticResource InvertedBoolConverter}}">
-                <Label 
+            <Label 
                 Text="🅿️"
                 FontSize="48"
                 HorizontalOptions="Center" />
-                <Label 
+            <Label 
                 Text="{Binding MensajeVacio}"
                 FontSize="18"
                 HorizontalOptions="Center"
                 Margin="0,10" />
-                <Label 
+            <Label 
                 Text="Presiona 'Nueva Reserva' para comenzar"
                 FontSize="14"
                 TextColor="Gray"
                 HorizontalOptions="Center" />
-            </StackLayout>
-        </Grid>
+        </StackLayout>
+    </Grid>
     </ScrollView>
-
 </ContentPage>
