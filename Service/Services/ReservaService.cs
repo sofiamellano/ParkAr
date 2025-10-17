@@ -1,4 +1,5 @@
-﻿using Service.Interfaces;
+﻿using Microsoft.Extensions.Caching.Memory;
+using Service.Interfaces;
 using Service.Models;
 using Service.Utils;
 using System;
@@ -15,7 +16,7 @@ namespace Service.Services
     public class ReservaService : GenericService<Reserva>, IReservaService
     {
 
-        public ReservaService(HttpClient? httpClient = null) : base(httpClient)
+        public ReservaService(HttpClient? httpClient = null, IMemoryCache? memoryCache = null) : base(httpClient, memoryCache)
         {
         }
         public async Task<List<Reserva>?> GetByUsuarioAsync(int idUsuario)

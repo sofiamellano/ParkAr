@@ -1,7 +1,147 @@
 ﻿@page "/"
+@inject FirebaseAuthService _firebaseAuthService
+@inject NavigationManager _navigationManager
+@rendermode InteractiveServer
 
-<PageTitle>Home</PageTitle>
+<PageTitle>ParkAR - Sistema de Reservas</PageTitle>
 
-<h1>Hello, world!</h1>
+@if (isLoading)
+{
+    <div class="container-fluid py-5">
+        <div class="row justify-content-center">
+            <div class="col-md-6 text-center">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Cargando...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+else if (isAuthenticated)
+{
+    <!-- Usuario autenticado - redirigir al dashboard -->
+    <div></div>
+}
+else
+{
+    <!-- Landing page para usuarios no autenticados -->
+    <div class="hero-section bg-gradient-primary text-white py-5">
+        <div class="container">
+            <div class="row align-items-center min-vh-75">
+                <div class="col-lg-6">
+                    <h1 class="display-4 fw-bold mb-4">
+                        <i class="bi bi-p-square-fill me-3"></i>ParkAR
+                    </h1>
+                    <p class="lead mb-4">
+                        El sistema de reservas de estacionamiento más moderno y fácil de usar. 
+                        Encuentra y reserva tu lugar de forma rápida y segura.
+                    </p>
+                    <div class="d-flex gap-3 flex-wrap">
+                        <button class="btn btn-light btn-lg" @onclick='() => _navigationManager.NavigateTo("/login")'>
+                            <i class="bi bi-box-arrow-in-right me-2"></i>Iniciar Sesión
+                        </button>
+                        <button class="btn btn-outline-light btn-lg" @onclick='() => _navigationManager.NavigateTo("/signin")'>
+                            <i class="bi bi-person-plus me-2"></i>Registrarse
+                        </button>
+                    </div>
+                </div>
+                <div class="col-lg-6 text-center">
+                    <div class="hero-icon">
+                        <i class="bi bi-car-front display-1" style="font-size: 8rem; opacity: 0.8;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
-Welcome to your new app.
+    <!-- Características -->
+    <div class="container py-5">
+        <div class="row">
+            <div class="col-12 text-center mb-5">
+                <h2 class="h3 fw-bold">¿Por qué elegir ParkAR?</h2>
+                <p class="text-muted">Descubre las ventajas de nuestro sistema</p>
+            </div>
+        </div>
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="card border-0 shadow-sm h-100 text-center">
+                    <div class="card-body p-4">
+                        <div class="bg-primary rounded-circle p-3 d-inline-flex mb-3">
+                            <i class="bi bi-clock fs-4 text-white"></i>
+                        </div>
+                        <h5 class="fw-bold">Reservas en Tiempo Real</h5>
+                        <p class="text-muted">Ve la disponibilidad al instante y reserva tu lugar en segundos.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card border-0 shadow-sm h-100 text-center">
+                    <div class="card-body p-4">
+                        <div class="bg-success rounded-circle p-3 d-inline-flex mb-3">
+                            <i class="bi bi-shield-check fs-4 text-white"></i>
+                        </div>
+                        <h5 class="fw-bold">Seguro y Confiable</h5>
+                        <p class="text-muted">Tu información está protegida y tus reservas garantizadas.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card border-0 shadow-sm h-100 text-center">
+                    <div class="card-body p-4">
+                        <div class="bg-info rounded-circle p-3 d-inline-flex mb-3">
+                            <i class="bi bi-phone fs-4 text-white"></i>
+                        </div>
+                        <h5 class="fw-bold">Fácil de Usar</h5>
+                        <p class="text-muted">Interfaz intuitiva diseñada para una experiencia perfecta.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private bool isAuthenticated = false;
+    private bool isLoading = true;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            try
+            {
+                isAuthenticated = await _firebaseAuthService.IsUserAuthenticated();
+                
+                if (isAuthenticated)
+                {
+                    // Redirigir al dashboard si está autenticado
+                    _navigationManager.NavigateTo("/miembros/dashboard");
+                    return;
+                }
+                
+                isLoading = false;
+                StateHasChanged();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error al verificar autenticación: {ex.Message}");
+                isLoading = false;
+                StateHasChanged();
+            }
+        }
+    }
+}
+
+<style>
+    .bg-gradient-primary {
+        background: linear-gradient(135deg, #007bff 0%, #6f42c1 100%);
+    }
+    
+    .min-vh-75 {
+        min-height: 75vh;
+    }
+    
+    .hero-icon {
+        animation: float 3s ease-in-out infinite;
+    }
+</style>

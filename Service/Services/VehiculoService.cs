@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Caching.Memory;
 using Service.Interfaces;
 using Service.Models;
 using System.Text.Json;
@@ -6,7 +7,7 @@ namespace Service.Services
 {
     public class VehiculoService : GenericService<Vehiculo>, IVehiculoService
     {
-        public VehiculoService(HttpClient? httpClient = null) : base(httpClient)
+        public VehiculoService(HttpClient? httpClient = null, IMemoryCache? memoryCache = null) : base(httpClient, memoryCache)
         {
         }
 

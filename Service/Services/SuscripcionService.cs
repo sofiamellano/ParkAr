@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Caching.Memory;
 using Service.Interfaces;
 using Service.Models;
 using System.Text.Json;
@@ -6,7 +7,7 @@ namespace Service.Services
 {
     public class SuscripcionService : GenericService<Suscripcion>, ISuscripcionService
     {
-        public SuscripcionService(HttpClient? httpClient = null) : base(httpClient)
+        public SuscripcionService(HttpClient? httpClient = null, IMemoryCache? memoryCache = null) : base(httpClient, memoryCache)
         {
         }
 

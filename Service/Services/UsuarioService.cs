@@ -1,4 +1,5 @@
-﻿using Service.Interfaces;
+﻿using Microsoft.Extensions.Caching.Memory;
+using Service.Interfaces;
 using Service.Models;
 using Service.Utils;
 using System;
@@ -14,7 +15,7 @@ namespace Service.Services
 {
     public class UsuarioService : GenericService<Usuario>, IUsuarioService
     {
-        public UsuarioService(HttpClient? httpClient = null) : base(httpClient)
+        public UsuarioService(HttpClient? httpClient = null, IMemoryCache? memoryCache = null) : base(httpClient, memoryCache)
         { }
         public async Task<Usuario?> GetByEmailAsync(string email)
         {

@@ -9,10 +9,17 @@
   <ItemGroup>
     <PackageReference Include="CurrieTechnologies.Razor.SweetAlert2" Version="5.6.0" />
     <PackageReference Include="FirebaseAuthentication.net" Version="4.1.0" />
+    <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="9.0.10" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Service\Service.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Components\Pages\Miembros\Historial\" />
+    <Folder Include="Components\Pages\Miembros\Suscripciones\" />
+    <Folder Include="Components\Pages\Miembros\Reservas\" />
   </ItemGroup>
 
 </Project>

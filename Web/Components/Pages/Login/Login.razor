@@ -129,6 +129,7 @@ else
                     return;
                 }
                 isAuthenticated = true;
+                await _firebaseAuthService.IsUserAuthenticated();
                 StateHasChanged();
                 // Aquí podrías redirigir al usuario a otra página si es necesario
             }
@@ -165,6 +166,7 @@ else
         if (user != null)
         {
             isAuthenticated = true;
+            await _firebaseAuthService.IsUserAuthenticated();
             StateHasChanged();
             // Aquí podrías redirigir al usuario a otra página si es necesario
         }
