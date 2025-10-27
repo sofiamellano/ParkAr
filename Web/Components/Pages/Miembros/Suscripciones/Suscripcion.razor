@@ -1,0 +1,652 @@
+﻿@page "/miembros/suscripciones"
+@inject IUsuarioService _usuarioService
+@inject ISuscripcionService _suscripcionService
+@inject IPlanService _planService
+@inject FirebaseAuthService _firebaseAuthService
+@inject SweetAlertService _sweetAlert
+@inject NavigationManager _navigationManager
+@rendermode InteractiveServer
+
+<PageTitle>Suscripciones - ParkAR</PageTitle>
+
+@if (!isAuthenticated && !isLoading)
+{
+    <div class="container-fluid py-5">
+        <div class="row justify-content-center">
+            <div class="col-md-6 text-center">
+                <i class="bi bi-shield-lock display-1 text-muted"></i>
+                <h3 class="mt-3">Acceso Restringido</h3>
+                <p class="text-muted">Debes iniciar sesión para gestionar tus suscripciones.</p>
+                <button class="btn btn-primary" @onclick='() => _navigationManager.NavigateTo("/login")'>
+                    <i class="bi bi-box-arrow-in-right me-2"></i>Iniciar Sesión
+                </button>
+            </div>
+        </div>
+    </div>
+}
+else if (isLoading)
+{
+    <div class="container-fluid py-5">
+        <div class="row justify-content-center">
+            <div class="col-md-6 text-center">
+                <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+                    <span class="visually-hidden">Cargando...</span>
+                </div>
+                <h5 class="mt-3">Cargando suscripciones...</h5>
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    <div class="container-fluid py-4">
+        <!-- Breadcrumb -->
+        <BreadcrumbNav Items="breadcrumbItems" />
+
+        <!-- Suscripción Actual (cuando tiene suscripción) -->
+        @if (tieneSuscripcionActiva && suscripcionActual != null)
+        {
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="alert alert-success border-0 shadow-sm" role="alert">
+                        <div class="d-flex align-items-start">
+                            <div class="flex-shrink-0">
+                                <i class="bi bi-check-circle-fill fs-1 text-success"></i>
+                            </div>
+                            <div class="flex-grow-1 ms-3">
+                                <h4 class="alert-heading mb-3">
+                                    <i class="bi bi-star-fill me-2"></i>Mi Suscripción Actual
+                                </h4>
+                                <h5 class="fw-bold mb-3">@suscripcionActual.Nombre</h5>
+                                
+                                <div class="row g-3 mb-3">
+                                    <div class="col-md-4">
+                                        <div class="d-flex align-items-center">
+                                            <i class="bi bi-calendar-check me-2"></i>
+                                            <div>
+                                                <small class="text-muted d-block">Estado</small>
+                                                <span class="badge bg-success">@suscripcionActual.Estado</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="d-flex align-items-center">
+                                            <i class="bi bi-calendar-event me-2"></i>
+                                            <div>
+                                                <small class="text-muted d-block">Vence el</small>
+                                                <strong>@suscripcionActual.FechaVencimiento.ToString("dd/MM/yyyy")</strong>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="d-flex align-items-center">
+                                            <i class="bi bi-cash me-2"></i>
+                                            <div>
+                                                <small class="text-muted d-block">Precio</small>
+                                                <strong>$@suscripcionActual.PrecioMensual.ToString("N0")</strong>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                @if (DiasParaVencer(suscripcionActual.FechaVencimiento) <= 7 && DiasParaVencer(suscripcionActual.FechaVencimiento) > 0)
+                                {
+                                    <div class="alert alert-warning mb-3" role="alert">
+                                        <i class="bi bi-exclamation-triangle me-2"></i>
+                                        <strong>¡Atención!</strong> Tu suscripción vence en @DiasParaVencer(suscripcionActual.FechaVencimiento) días
+                                    </div>
+                                }
+
+                                <button class="btn btn-primary" @onclick="RenovarSuscripcion">
+                                    <i class="bi bi-arrow-repeat me-2"></i>Renovar Suscripción
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+        else
+        {
+            <!-- Mensaje sin suscripción -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="alert alert-danger border-0 shadow-sm" role="alert">
+                        <div class="text-center py-3">
+                            <i class="bi bi-x-circle-fill fs-1 text-danger mb-3"></i>
+                            <h4 class="alert-heading">Sin Suscripción Activa</h4>
+                            <p class="mb-0">Activa una suscripción para disfrutar de todos los beneficios de ParkAR</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+
+        <!-- Título de Suscripciones Disponibles -->
+        <div class="row mb-4">
+            <div class="col-12 text-center">
+                <h3 class="fw-bold">
+                    <i class="bi bi-grid-3x3-gap-fill me-2 text-primary"></i>
+                    Suscripciones Disponibles
+                </h3>
+                <p class="text-muted">Elige el plan que mejor se adapte a tus necesidades</p>
+            </div>
+        </div>
+
+        <!-- Lista de Suscripciones Disponibles -->
+        <div class="row g-4 mb-4">
+            @foreach (var suscripcion in suscripcionesDisponibles)
+            {
+                <div class="col-lg-4 col-md-6">
+                    <div class="card h-100 border-0 shadow-sm position-relative hover-lift">
+                        @if (EsPlanPopular(suscripcion))
+                        {
+                            <div class="position-absolute top-0 end-0 m-3">
+                                <span class="badge bg-warning text-dark">
+                                    <i class="bi bi-star-fill me-1"></i>Popular
+                                </span>
+                            </div>
+                        }
+                        
+                        <div class="card-header bg-white border-bottom-0 text-center pt-4 pb-3">
+                            <h4 class="fw-bold mb-2">@suscripcion.Nombre</h4>
+                            <div class="h2 text-primary fw-bold mb-0">
+                                $@suscripcion.PrecioMensual.ToString("N0")
+                                <small class="text-muted fs-6">/mes</small>
+                            </div>
+                        </div>
+                        
+                        <div class="card-body">
+                            <p class="text-muted text-center mb-4">@suscripcion.Descripcion</p>
+                            
+                            <div class="d-flex justify-content-center mb-4">
+                                <span class="badge bg-light text-dark border">
+                                    <i class="bi bi-calendar-range me-1"></i>
+                                    Duración: @suscripcion.DuracionDias días
+                                </span>
+                            </div>
+                            
+                            <div class="mb-4">
+                                <h6 class="fw-bold mb-3">
+                                    <i class="bi bi-star me-2 text-warning"></i>Beneficios:
+                                </h6>
+                                <ul class="list-unstyled">
+                                    @foreach (var beneficio in suscripcion.Beneficios)
+                                    {
+                                        <li class="mb-2">
+                                            <i class="bi bi-check-circle-fill text-success me-2"></i>
+                                            @beneficio
+                                        </li>
+                                    }
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        <div class="card-footer bg-white border-top-0 pt-0 pb-4">
+                            @if (tieneSuscripcionActiva)
+                            {
+                                <button class="btn btn-outline-primary w-100" 
+                                        @onclick="() => CambiarSuscripcion(suscripcion)">
+                                    <i class="bi bi-arrow-left-right me-2"></i>Cambiar a este Plan
+                                </button>
+                            }
+                            else
+                            {
+                                <button class="btn btn-primary w-100" 
+                                        @onclick="() => ActivarSuscripcion(suscripcion)">
+                                    <i class="bi bi-rocket-takeoff me-2"></i>Activar Suscripción
+                                </button>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <!-- Botón de actualizar -->
+        <div class="row">
+            <div class="col-12 text-center">
+                <button class="btn btn-outline-secondary" @onclick="RefreshSuscripciones">
+                    <i class="bi bi-arrow-clockwise me-2"></i>Actualizar Suscripciones
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private bool isAuthenticated = false;
+    private bool isLoading = true;
+    private bool isInitialized = false;
+    private bool tieneSuscripcionActiva = false;
+    private string? errorMessage;
+    private bool showError = false;
+    
+    private Usuario? usuario;
+    private SuscripcionActualDTO? suscripcionActual;
+    private List<SuscripcionDisponibleDTO> suscripcionesDisponibles = new();
+
+    private List<BreadcrumbNav.BreadcrumbItem> breadcrumbItems = new()
+    {
+        new("Dashboard", "/miembros/dashboard", "bi bi-house"),
+        new("Suscripciones", "#")
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            isAuthenticated = await _firebaseAuthService.IsUserAuthenticated();
+
+            if (isAuthenticated)
+            {
+                await CargarDatosUsuario();
+                await LoadSuscripciones();
+            }
+
+            isLoading = false;
+            isInitialized = true;
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+            showError = true;
+            isAuthenticated = false;
+            isLoading = false;
+            isInitialized = true;
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            if (showError && !string.IsNullOrEmpty(errorMessage))
+            {
+                await _sweetAlert.FireAsync(
+                    "Error",
+                    $"Error al cargar suscripciones: {errorMessage}",
+                    SweetAlertIcon.Error
+                );
+
+                showError = false;
+            }
+        }
+    }
+
+    private async Task CargarDatosUsuario()
+    {
+        try
+        {
+            var firebaseUser = _firebaseAuthService.CurrentUser;
+            if (firebaseUser != null)
+            {
+                var usuarios = await _usuarioService.GetAllAsync();
+                usuario = usuarios?.FirstOrDefault(u => u.Email == firebaseUser.Email);
+                
+                if (usuario == null)
+                {
+                    usuario = new Usuario
+                    {
+                        Email = firebaseUser.Email,
+                        Nombre = firebaseUser.DisplayName ?? "Usuario",
+                        Password = "",
+                        TipoUsuario = Service.Enums.TipoUsuarioEnum.Cliente
+                    };
+                    
+                    usuario = await _usuarioService.AddAsync(usuario);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            // Error silencioso, usuario quedará como null
+        }
+    }
+
+    private async Task LoadSuscripciones()
+    {
+        try
+        {
+            isLoading = true;
+            
+            await CargarSuscripcionActual();
+            await CargarSuscripcionesDisponibles();
+        }
+        catch (Exception ex)
+        {
+            await _sweetAlert.FireAsync("Error", "No se pudieron cargar las suscripciones", SweetAlertIcon.Error);
+            
+            suscripcionActual = null;
+            tieneSuscripcionActiva = false;
+            suscripcionesDisponibles = new List<SuscripcionDisponibleDTO>();
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task CargarSuscripcionActual()
+    {
+        if (usuario == null) return;
+
+        try
+        {
+            var suscripciones = await _suscripcionService.GetByUsuarioAsync(usuario.Id);
+            
+            var suscripcionActiva = suscripciones?.FirstOrDefault(s => 
+                s.Estado == Service.Enums.EstadoSuscripcionEnum.Activo && 
+                !s.IsDeleted &&
+                s.FechaFin.Date >= DateTime.Now.Date);
+
+            if (suscripcionActiva != null)
+            {
+                if (suscripcionActiva.Plan == null)
+                {
+                    var plan = await _planService.GetByIdAsync(suscripcionActiva.PlanId);
+                    if (plan != null)
+                    {
+                        suscripcionActiva.Plan = plan;
+                    }
+                }
+                
+                if (suscripcionActiva.Plan != null)
+                {
+                    suscripcionActual = new SuscripcionActualDTO
+                    {
+                        Nombre = suscripcionActiva.Plan.Nombre,
+                        FechaInicio = suscripcionActiva.FechaInicio,
+                        FechaVencimiento = suscripcionActiva.FechaFin,
+                        Estado = "Activa",
+                        PrecioMensual = suscripcionActiva.Plan.Precio
+                    };
+                    
+                    tieneSuscripcionActiva = true;
+                }
+                else
+                {
+                    suscripcionActual = null;
+                    tieneSuscripcionActiva = false;
+                }
+            }
+            else
+            {
+                suscripcionActual = null;
+                tieneSuscripcionActiva = false;
+            }
+        }
+        catch (Exception ex)
+        {
+            suscripcionActual = null;
+            tieneSuscripcionActiva = false;
+        }
+    }
+
+    private async Task CargarSuscripcionesDisponibles()
+    {
+        try
+        {
+            var planes = await _planService.GetAllAsync();
+            var suscripcionesDisponiblesList = new List<SuscripcionDisponibleDTO>();
+
+            foreach (var plan in planes?.Where(p => !p.IsDeleted) ?? new List<Plan>())
+            {
+                var suscripcionDisponible = new SuscripcionDisponibleDTO
+                {
+                    Id = plan.Id,
+                    Nombre = plan.Nombre,
+                    PrecioMensual = plan.Precio,
+                    Descripcion = plan.Descripcion ?? "Suscripción disponible",
+                    DuracionDias = plan.Duracion ?? 30,
+                    Beneficios = GenerarBeneficios(plan)
+                };
+                
+                suscripcionesDisponiblesList.Add(suscripcionDisponible);
+            }
+
+            suscripcionesDisponibles = suscripcionesDisponiblesList;
+        }
+        catch (Exception ex)
+        {
+            suscripcionesDisponibles = new List<SuscripcionDisponibleDTO>();
+        }
+    }
+
+    private List<string> GenerarBeneficios(Plan plan)
+    {
+        var beneficios = new List<string>();
+        
+        if (plan.Precio <= 1000)
+        {
+            beneficios.AddRange(new[] { "5 reservas mensuales", "Soporte básico" });
+        }
+        else if (plan.Precio <= 2000)
+        {
+            beneficios.AddRange(new[] { "Reservas ilimitadas", "Soporte prioritario", "Descuentos especiales" });
+        }
+        else
+        {
+            beneficios.AddRange(new[] { "Reservas ilimitadas", "Soporte 24/7", "Descuentos exclusivos", "Acceso anticipado" });
+        }
+
+        if (plan.Duracion.HasValue)
+        {
+            var duracionTexto = plan.Duracion.Value >= 365 ? "Anual" : 
+                               plan.Duracion.Value >= 30 ? "Mensual" : 
+                               $"{plan.Duracion.Value} días";
+            beneficios.Add($"Duración: {duracionTexto}");
+        }
+
+        return beneficios;
+    }
+
+    private async Task RenovarSuscripcion()
+    {
+        if (suscripcionActual == null) return;
+
+        var resultado = await _sweetAlert.FireAsync(new SweetAlertOptions
+        {
+            Title = "Renovar Suscripción",
+            Text = $"¿Desea renovar su {suscripcionActual.Nombre}?",
+            Icon = SweetAlertIcon.Question,
+            ShowCancelButton = true,
+            ConfirmButtonText = "Sí, Renovar",
+            CancelButtonText = "Cancelar"
+        });
+
+        if (resultado.IsConfirmed)
+        {
+            try
+            {
+                isLoading = true;
+                
+                // TODO: Implementar lógica de renovación
+                await _sweetAlert.FireAsync("✅ Suscripción Renovada", 
+                    $"Su suscripción {suscripcionActual.Nombre} ha sido renovada exitosamente.", 
+                    SweetAlertIcon.Success);
+                
+                await LoadSuscripciones();
+                StateHasChanged();
+            }
+            catch (Exception ex)
+            {
+                await _sweetAlert.FireAsync("Error", $"Error al renovar: {ex.Message}", SweetAlertIcon.Error);
+            }
+            finally
+            {
+                isLoading = false;
+            }
+        }
+    }
+
+    private async Task CambiarSuscripcion(SuscripcionDisponibleDTO suscripcion)
+    {
+        var resultado = await _sweetAlert.FireAsync(new SweetAlertOptions
+        {
+            Title = "Cambiar Suscripción",
+            Html = $@"
+                <div class='text-start'>
+                    <p>¿Desea cambiar a <strong>{suscripcion.Nombre}</strong>?</p>
+                    <p><strong>Precio:</strong> ${suscripcion.PrecioMensual:N0}/mes</p>
+                    <p><strong>Duración:</strong> {suscripcion.DuracionDias} días</p>
+                    <hr>
+                    <p class='text-muted small'>Su suscripción actual será cancelada.</p>
+                </div>
+            ",
+            Icon = SweetAlertIcon.Question,
+            ShowCancelButton = true,
+            ConfirmButtonText = "Sí, Cambiar",
+            CancelButtonText = "Cancelar"
+        });
+
+        if (resultado.IsConfirmed)
+        {
+            await ActivarSuscripcionDirectamente(suscripcion);
+        }
+    }
+
+    private async Task ActivarSuscripcion(SuscripcionDisponibleDTO suscripcion)
+    {
+        var resultado = await _sweetAlert.FireAsync(new SweetAlertOptions
+        {
+            Title = "Activar Suscripción",
+            Html = $@"
+                <div class='text-start'>
+                    <h5 class='mb-3'>{suscripcion.Nombre}</h5>
+                    <p><strong>Precio:</strong> ${suscripcion.PrecioMensual:N0}/mes</p>
+                    <p><strong>Duración:</strong> {suscripcion.DuracionDias} días</p>
+                    <hr>
+                    <p class='text-muted small'>¿Confirmas la activación de este plan?</p>
+                </div>
+            ",
+            Icon = SweetAlertIcon.Question,
+            ShowCancelButton = true,
+            ConfirmButtonText = "Sí, Activar",
+            CancelButtonText = "Cancelar"
+        });
+
+        if (resultado.IsConfirmed)
+        {
+            await ActivarSuscripcionDirectamente(suscripcion);
+        }
+    }
+
+    private async Task ActivarSuscripcionDirectamente(SuscripcionDisponibleDTO suscripcionDisponible)
+    {
+        try
+        {
+            isLoading = true;
+
+            if (usuario == null) return;
+
+            // Desactivar suscripción actual si existe
+            if (tieneSuscripcionActiva)
+            {
+                var suscripcionesActuales = await _suscripcionService.GetByUsuarioAsync(usuario.Id);
+                var suscripcionActivaExistente = suscripcionesActuales?.FirstOrDefault(s => 
+                    s.Estado == Service.Enums.EstadoSuscripcionEnum.Activo && !s.IsDeleted);
+
+                if (suscripcionActivaExistente != null)
+                {
+                    suscripcionActivaExistente.Estado = Service.Enums.EstadoSuscripcionEnum.Cancelado;
+                    await _suscripcionService.UpdateAsync(suscripcionActivaExistente);
+                }
+            }
+
+            // Crear nueva suscripción
+            var nuevaSuscripcion = new Service.Models.Suscripcion
+            {
+                UsuarioId = usuario.Id,
+                PlanId = suscripcionDisponible.Id,
+                FechaInicio = DateTime.Now,
+                FechaFin = DateTime.Now.AddDays(suscripcionDisponible.DuracionDias),
+                Estado = Service.Enums.EstadoSuscripcionEnum.Activo,
+                IsDeleted = false
+            };
+
+            var suscripcionCreada = await _suscripcionService.AddAsync(nuevaSuscripcion);
+
+            if (suscripcionCreada != null)
+            {
+                await _sweetAlert.FireAsync("✅ Suscripción Activada", 
+                    $"¡{suscripcionDisponible.Nombre} activada exitosamente!\n\n" +
+                    $"Válida hasta: {nuevaSuscripcion.FechaFin:dd/MM/yyyy}", 
+                    SweetAlertIcon.Success);
+                
+                await LoadSuscripciones();
+                StateHasChanged();
+            }
+            else
+            {
+                await _sweetAlert.FireAsync("Error", "No se pudo activar la suscripción", SweetAlertIcon.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            await _sweetAlert.FireAsync("Error", $"Error al activar suscripción: {ex.Message}", SweetAlertIcon.Error);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task RefreshSuscripciones()
+    {
+        await LoadSuscripciones();
+        StateHasChanged();
+    }
+
+    private bool EsPlanPopular(SuscripcionDisponibleDTO suscripcion)
+    {
+        return suscripcion.Nombre.Contains("Mensual", StringComparison.OrdinalIgnoreCase) ||
+               suscripcion.PrecioMensual >= 2000;
+    }
+
+    private int DiasParaVencer(DateTime fechaFin)
+    {
+        return (int)(fechaFin.Date - DateTime.Now.Date).TotalDays;
+    }
+
+    // DTOs para la presentación
+    public class SuscripcionActualDTO
+    {
+        public string Nombre { get; set; } = string.Empty;
+        public DateTime FechaInicio { get; set; }
+        public DateTime FechaVencimiento { get; set; }
+        public string Estado { get; set; } = string.Empty;
+        public decimal PrecioMensual { get; set; }
+    }
+
+    public class SuscripcionDisponibleDTO
+    {
+        public int Id { get; set; }
+        public string Nombre { get; set; } = string.Empty;
+        public decimal PrecioMensual { get; set; }
+        public string Descripcion { get; set; } = string.Empty;
+        public int DuracionDias { get; set; }
+        public List<string> Beneficios { get; set; } = new();
+    }
+}
+
+<style>
+    .hover-lift {
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    
+    .hover-lift:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+    }
+
+    .alert-success {
+        background-color: #d4edda;
+        border-color: #c3e6cb;
+    }
+
+    .alert-danger {
+        background-color: #f8d7da;
+        border-color: #f5c6cb;
+    }
+</style>

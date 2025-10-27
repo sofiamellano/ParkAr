@@ -1,0 +1,45 @@
+@* Componente reutilizable para breadcrumbs *@
+@inject NavigationManager NavigationManager
+
+<nav aria-label="breadcrumb" class="mb-4">
+    <ol class="breadcrumb">
+        @foreach (var item in Items)
+        {
+            if (item == Items.Last())
+            {
+                <li class="breadcrumb-item active" aria-current="page">@item.Text</li>
+            }
+            else
+            {
+                <li class="breadcrumb-item">
+                    <a href="@item.Url" class="text-decoration-none">
+                        @if (!string.IsNullOrEmpty(item.Icon))
+                        {
+                            <i class="@item.Icon me-1"></i>
+                        }
+                        @item.Text
+                    </a>
+                </li>
+            }
+        }
+    </ol>
+</nav>
+
+@code {
+    [Parameter]
+    public List<BreadcrumbItem> Items { get; set; } = new();
+
+    public class BreadcrumbItem
+    {
+        public string Text { get; set; } = string.Empty;
+        public string Url { get; set; } = "#";
+        public string? Icon { get; set; }
+
+        public BreadcrumbItem(string text, string url, string? icon = null)
+        {
+            Text = text;
+            Url = url;
+            Icon = icon;
+        }
+    }
+}

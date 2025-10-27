@@ -1,0 +1,127 @@
+@* Componente para mostrar tarjetas de planes de suscripción *@
+
+<div class="card @GetCardClass() h-100 position-relative overflow-hidden">
+    @if (IsPopular)
+    {
+        <div class="position-absolute top-0 end-0">
+            <span class="badge bg-warning text-dark m-2">
+                <i class="bi bi-star-fill me-1"></i>Popular
+            </span>
+        </div>
+    }
+    
+    <div class="card-header bg-white border-bottom text-center py-4">
+        <h4 class="mb-0 fw-bold">@PlanNombre</h4>
+        @if (!string.IsNullOrEmpty(Descripcion))
+        {
+            <p class="text-muted small mb-0 mt-2">@Descripcion</p>
+        }
+    </div>
+    
+    <div class="card-body text-center py-4">
+        <div class="mb-4">
+            <h2 class="display-4 fw-bold text-primary mb-0">
+                $@Precio.ToString("N0")
+            </h2>
+            <p class="text-muted">
+                @if (Duracion.HasValue)
+                {
+                    <span>por @Duracion días</span>
+                }
+                else
+                {
+                    <span>por hora</span>
+                }
+            </p>
+        </div>
+        
+        @if (Caracteristicas != null && Caracteristicas.Any())
+        {
+            <div class="text-start mb-4">
+                <ul class="list-unstyled">
+                    @foreach (var caracteristica in Caracteristicas)
+                    {
+                        <li class="mb-2">
+                            <i class="bi bi-check-circle-fill text-success me-2"></i>
+                            @caracteristica
+                        </li>
+                    }
+                </ul>
+            </div>
+        }
+        
+        @if (TieneSuscripcionActiva)
+        {
+            <button class="btn btn-outline-success w-100" disabled>
+                <i class="bi bi-check-circle me-2"></i>Suscripción Activa
+            </button>
+        }
+        else
+        {
+            <button class="btn @GetButtonClass() w-100" @onclick="HandleSuscribirse">
+                <i class="bi bi-cart-plus me-2"></i>Contratar Plan
+            </button>
+        }
+    </div>
+    
+    @if (!string.IsNullOrEmpty(FechaVencimiento))
+    {
+        <div class="card-footer bg-light text-center small">
+            <i class="bi bi-calendar-event me-1"></i>
+            Vence: @FechaVencimiento
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public int PlanId { get; set; }
+
+    [Parameter]
+    public string PlanNombre { get; set; } = string.Empty;
+
+    [Parameter]
+    public string? Descripcion { get; set; }
+
+    [Parameter]
+    public decimal Precio { get; set; }
+
+    [Parameter]
+    public int? Duracion { get; set; }
+
+    [Parameter]
+    public bool IsPopular { get; set; }
+
+    [Parameter]
+    public bool TieneSuscripcionActiva { get; set; }
+
+    [Parameter]
+    public string? FechaVencimiento { get; set; }
+
+    [Parameter]
+    public List<string>? Caracteristicas { get; set; }
+
+    [Parameter]
+    public EventCallback<int> OnSuscribirse { get; set; }
+
+    private async Task HandleSuscribirse()
+    {
+        await OnSuscribirse.InvokeAsync(PlanId);
+    }
+
+    private string GetCardClass()
+    {
+        if (IsPopular)
+            return "border-warning border-2 shadow-lg";
+        
+        return "border-0 shadow-sm";
+    }
+
+    private string GetButtonClass()
+    {
+        if (IsPopular)
+            return "btn-warning";
+        
+        return "btn-primary";
+    }
+}

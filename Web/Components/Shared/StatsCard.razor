@@ -1,0 +1,58 @@
+@* Componente reutilizable para mostrar tarjetas de estadísticas *@
+
+<div class="card border-0 shadow-sm h-100">
+    <div class="card-body text-center">
+        <div class="d-flex align-items-center justify-content-center mb-3">
+            <div class="@GetBackgroundClass() rounded-circle p-3">
+                <i class="@Icon fs-4 text-white"></i>
+            </div>
+        </div>
+        <h4 class="fw-bold mb-1">@Value</h4>
+        <p class="text-muted mb-0">@Label</p>
+        @if (!string.IsNullOrEmpty(Subtitle))
+        {
+            <small class="text-muted">@Subtitle</small>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public string Icon { get; set; } = "bi bi-graph-up";
+
+    [Parameter]
+    public string Value { get; set; } = "0";
+
+    [Parameter]
+    public string Label { get; set; } = "Estadística";
+
+    [Parameter]
+    public string? Subtitle { get; set; }
+
+    [Parameter]
+    public StatCardColor Color { get; set; } = StatCardColor.Primary;
+
+    private string GetBackgroundClass()
+    {
+        return Color switch
+        {
+            StatCardColor.Primary => "bg-primary",
+            StatCardColor.Success => "bg-success",
+            StatCardColor.Info => "bg-info",
+            StatCardColor.Warning => "bg-warning",
+            StatCardColor.Danger => "bg-danger",
+            StatCardColor.Secondary => "bg-secondary",
+            _ => "bg-primary"
+        };
+    }
+
+    public enum StatCardColor
+    {
+        Primary,
+        Success,
+        Info,
+        Warning,
+        Danger,
+        Secondary
+    }
+}

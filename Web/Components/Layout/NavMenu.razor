@@ -1,5 +1,7 @@
 ﻿@inject FirebaseAuthService _firebaseAuthService
 @inject NavigationManager _navigationManager
+@inject IUsuarioService _usuarioService
+@inject IMemoryCache _memoryCache
 @rendermode InteractiveServer
 
 <div class="top-row ps-3 navbar navbar-dark">
@@ -68,7 +70,8 @@
 </div>
 
 @code {
-    private FirebaseUser? _userLogued;
+    FirebaseUser _userLogued;
+    Usuario? _usuarioLogueado;
     private bool _isLogued = false;
     private bool _isInitialized = false;
     private string textBtnLogin => _isLogued ? "Cerrar sesión" : "Iniciar sesión";
@@ -139,16 +142,13 @@
     private async void LoginChanged()
     {
         try
-        {
-            Console.WriteLine("NavMenu: LoginChanged event triggered");
-            var isAuthenticated = await _firebaseAuthService.IsUserAuthenticated();
-            Console.WriteLine($"NavMenu LoginChanged: Autenticado = {isAuthenticated}");
-            
-            if (isAuthenticated && _firebaseAuthService.CurrentUser != null)
+        {    
+            if (_firebaseAuthService.CurrentUser != null)
             {
                 _userLogued = _firebaseAuthService.CurrentUser;
                 _isLogued = true;
                 Console.WriteLine($"NavMenu LoginChanged: Usuario logueado = {_userLogued.Email}");
+                if (_usuarioLogueado == null) await CargarUsuarioAsync();
             }
             else
             {
@@ -172,6 +172,27 @@
             _isLogued = false;
             _userLogued = null;
             StateHasChanged();
+        }
+    }
+
+    private async Task CargarUsuarioAsync()
+    {
+        try
+        {
+            if (!string.IsNullOrWhiteSpace(_userLogued?.Email))
+            {
+                _usuarioLogueado = await _usuarioService.GetByEmailAsync(_userLogued.Email);
+
+                // Guardar el usuario en caché para que otras páginas puedan accederlo
+                if (_usuarioLogueado != null)
+                {
+                    _memoryCache.Set("usuarioLogueado", _usuarioLogueado);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine(ex);
         }
     }
 

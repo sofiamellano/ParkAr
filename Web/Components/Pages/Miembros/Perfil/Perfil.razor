@@ -275,6 +275,9 @@ else
     private bool isAuthenticated = false;
     private bool isLoading = true;
     private bool isInitialized = false;
+    private string? errorMessage;
+    private bool showError = false;
+    
     private Usuario? usuario;
     private List<Vehiculo> vehiculos = new();
     private int totalReservas = 0;
@@ -283,9 +286,7 @@ else
     {
         try
         {
-            Console.WriteLine("Perfil: Verificando autenticación...");
             isAuthenticated = await _firebaseAuthService.IsUserAuthenticated();
-            Console.WriteLine($"Perfil: Autenticado = {isAuthenticated}");
             
             if (isAuthenticated)
             {
@@ -300,7 +301,8 @@ else
         catch (Exception ex)
         {
             Console.WriteLine($"Error al verificar autenticación en Perfil: {ex.Message}");
-            await _sweetAlert.FireAsync("Error", $"Error al cargar el perfil: {ex.Message}", SweetAlertIcon.Error);
+            errorMessage = ex.Message;
+            showError = true;
             isAuthenticated = false;
             isLoading = false;
             isInitialized = true;
@@ -309,31 +311,40 @@ else
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender && !isInitialized)
+        if (firstRender)
         {
-            try
+            // Mostrar error si hubo alguno durante la inicialización
+            if (showError && !string.IsNullOrEmpty(errorMessage))
             {
-                Console.WriteLine("Perfil OnAfterRenderAsync: Verificando autenticación...");
-                isAuthenticated = await _firebaseAuthService.IsUserAuthenticated();
-                Console.WriteLine($"Perfil OnAfterRenderAsync: Autenticado = {isAuthenticated}");
-                
-                if (isAuthenticated)
-                {
-                    await CargarDatosUsuario();
-                    await CargarVehiculos();
-                    await CargarEstadisticas();
-                }
-                
-                isLoading = false;
-                StateHasChanged();
+                await _sweetAlert.FireAsync("Error", $"Error al cargar el perfil: {errorMessage}", SweetAlertIcon.Error);
+                showError = false;
             }
-            catch (Exception ex)
+            
+            // Si no se inicializó correctamente, intentar de nuevo
+            if (!isInitialized)
             {
-                Console.WriteLine($"Error en Perfil OnAfterRenderAsync: {ex.Message}");
-                await _sweetAlert.FireAsync("Error", $"Error al cargar el perfil: {ex.Message}", SweetAlertIcon.Error);
-                isAuthenticated = false;
-                isLoading = false;
-                StateHasChanged();
+                try
+                {
+                    isAuthenticated = await _firebaseAuthService.IsUserAuthenticated();
+                    
+                    if (isAuthenticated)
+                    {
+                        await CargarDatosUsuario();
+                        await CargarVehiculos();
+                        await CargarEstadisticas();
+                    }
+                    
+                    isLoading = false;
+                    StateHasChanged();
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error en Perfil OnAfterRenderAsync: {ex.Message}");
+                    await _sweetAlert.FireAsync("Error", $"Error al cargar el perfil: {ex.Message}", SweetAlertIcon.Error);
+                    isAuthenticated = false;
+                    isLoading = false;
+                    StateHasChanged();
+                }
             }
         }
     }
@@ -342,9 +353,7 @@ else
     {
         try
         {
-            Console.WriteLine("Perfil: Cargando datos del usuario...");
             var firebaseUser = _firebaseAuthService.CurrentUser;
-            Console.WriteLine($"Perfil: FirebaseUser = {firebaseUser?.Email}");
             
             if (firebaseUser != null)
             {
@@ -353,7 +362,6 @@ else
                 
                 if (usuario == null)
                 {
-                    Console.WriteLine("Perfil: Usuario no encontrado en BD, creando...");
                     usuario = new Usuario
                     {
                         Email = firebaseUser.Email,
@@ -363,11 +371,6 @@ else
                     };
                     
                     usuario = await _usuarioService.AddAsync(usuario);
-                    Console.WriteLine($"Perfil: Usuario creado con ID {usuario.Id}");
-                }
-                else
-                {
-                    Console.WriteLine($"Perfil: Usuario encontrado con ID {usuario.Id}");
                 }
             }
         }
@@ -383,10 +386,8 @@ else
         {
             if (usuario != null)
             {
-                Console.WriteLine($"Perfil: Cargando vehículos para usuario {usuario.Id}...");
                 var vehiculosList = await _vehiculoService.GetByUsuarioAsync(usuario.Id);
                 vehiculos = vehiculosList?.ToList() ?? new List<Vehiculo>();
-                Console.WriteLine($"Perfil: Total vehículos cargados = {vehiculos.Count}");
             }
         }
         catch (Exception ex)
@@ -402,10 +403,8 @@ else
         {
             if (usuario != null)
             {
-                Console.WriteLine($"Perfil: Cargando estadísticas para usuario {usuario.Id}...");
                 var reservas = await _reservaService.GetByUsuarioAsync(usuario.Id);
                 totalReservas = reservas?.Count ?? 0;
-                Console.WriteLine($"Perfil: Total reservas = {totalReservas}");
             }
         }
         catch (Exception ex)
@@ -434,16 +433,7 @@ else
             ",
             ShowCancelButton = true,
             ConfirmButtonText = "Guardar Cambios",
-            CancelButtonText = "Cancelar",
-            // PreConfirm = new PreConfirmCallback(async () => {
-            //     var nombre = await _sweetAlert.GetInputValueAsync("nombre-input");
-            //     if (string.IsNullOrWhiteSpace(nombre))
-            //     {
-            //         await _sweetAlert.ShowValidationMessage("El nombre es requerido");
-            //         return false;
-            //     }
-            //     return nombre;
-            // })
+            CancelButtonText = "Cancelar"
         });
 
         if (resultado.IsConfirmed && !string.IsNullOrWhiteSpace(resultado.Value))
