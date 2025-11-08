@@ -24,9 +24,48 @@
 
         @if (_isLogued && _isInitialized)
         {
+            @if (_isAdmin)
+            {
+                <!-- Sección de Admin -->
+                <div class="nav-item px-3">
+                    <div class="nav-section-title">
+                        ADMINISTRACIÓN
+                    </div>
+                </div>
+
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="admin/dashboard">
+                        <span class="bi bi-speedometer2 me-2" aria-hidden="true"></span> Dashboard Admin
+                    </NavLink>
+                </div>
+
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="admin/usuarios">
+                        <span class="bi bi-people-fill me-2" aria-hidden="true"></span> Usuarios
+                    </NavLink>
+                </div>
+
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="admin/lugares">
+                        <span class="bi bi-grid-3x3-gap-fill me-2" aria-hidden="true"></span> Lugares
+                    </NavLink>
+                </div>
+
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="admin/reservas">
+                        <span class="bi bi-calendar-check-fill me-2" aria-hidden="true"></span> Reservas
+                    </NavLink>
+                </div>
+
+                <!-- Separador -->
+                <div class="nav-item px-3">
+                    <hr class="text-muted my-3" />
+                </div>
+            }
+
             <!-- Sección de Miembros -->
             <div class="nav-item px-3">
-                <div class="nav-section-title text-muted small fw-bold mt-3 mb-2">
+                <div class="nav-section-title">
                     ÁREA DE MIEMBROS
                 </div>
             </div>
@@ -70,143 +109,61 @@
 </div>
 
 @code {
-    FirebaseUser _userLogued;
-    Usuario? _usuarioLogueado;
     private bool _isLogued = false;
     private bool _isInitialized = false;
-    private string textBtnLogin => _isLogued ? "Cerrar sesión" : "Iniciar sesión";
+    private bool _isAdmin = false;
+    private string textBtnLogin = "Iniciar sesión";
+    private Usuario? _usuario;
 
     protected override async Task OnInitializedAsync()
     {
-        try
-        {
-            Console.WriteLine("NavMenu: Verificando autenticación...");
-            _isLogued = await _firebaseAuthService.IsUserAuthenticated();
-            Console.WriteLine($"NavMenu: Autenticado = {_isLogued}");
-            
-            if (_isLogued)
-            {
-                _userLogued = _firebaseAuthService.CurrentUser;
-                Console.WriteLine($"NavMenu: Usuario = {_userLogued?.Email}");
-            }
-            _isInitialized = true;
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error al verificar autenticación en NavMenu: {ex.Message}");
-            _isLogued = false;
-            _userLogued = null;
-            _isInitialized = true;
-        }
+        await CheckUserAuthentication();
+        _isInitialized = true;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
-            // Suscribirse a cambios de login solo después del primer renderizado
-            _firebaseAuthService.OnChangeLogin += LoginChanged;
-            
-            // Si no se inicializó correctamente en OnInitializedAsync, intentar de nuevo
-            if (!_isInitialized)
-            {
-                try
-                {
-                    Console.WriteLine("NavMenu OnAfterRenderAsync: Verificando autenticación...");
-                    _isLogued = await _firebaseAuthService.IsUserAuthenticated();
-                    Console.WriteLine($"NavMenu OnAfterRenderAsync: Autenticado = {_isLogued}");
-                    
-                    if (_isLogued)
-                    {
-                        _userLogued = _firebaseAuthService.CurrentUser;
-                    }
-                    else
-                    {
-                        _userLogued = null;
-                    }
-                    _isInitialized = true;
-                    StateHasChanged();
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Error al verificar autenticación en OnAfterRenderAsync: {ex.Message}");
-                    _isLogued = false;
-                    _userLogued = null;
-                    _isInitialized = true;
-                    StateHasChanged();
-                }
-            }
+            await CheckUserAuthentication();
+            StateHasChanged();
         }
     }
 
-    private async void LoginChanged()
+    private async Task CheckUserAuthentication()
     {
         try
-        {    
-            if (_firebaseAuthService.CurrentUser != null)
+        {
+            _isLogued = await _firebaseAuthService.IsUserAuthenticated();
+
+            if (_isLogued)
             {
-                _userLogued = _firebaseAuthService.CurrentUser;
-                _isLogued = true;
-                Console.WriteLine($"NavMenu LoginChanged: Usuario logueado = {_userLogued.Email}");
-                if (_usuarioLogueado == null) await CargarUsuarioAsync();
+                textBtnLogin = "Cerrar sesión";
+                var firebaseUser = _firebaseAuthService.CurrentUser;
+
+                if (firebaseUser != null)
+                {
+                    var usuarios = await _usuarioService.GetAllAsync();
+                    _usuario = usuarios?.FirstOrDefault(u => u.Email == firebaseUser.Email);
+                    
+                    // Verificar si es Admin
+                    _isAdmin = _usuario?.TipoUsuario == Service.Enums.TipoUsuarioEnum.Admin;
+                }
             }
             else
             {
-                _isLogued = false;
-                _userLogued = null;
-                Console.WriteLine("NavMenu LoginChanged: Usuario deslogueado");
-                
-                // Solo redirigir al login si estamos en una página de miembros
-                var currentUrl = _navigationManager.Uri;
-                if (currentUrl.Contains("/miembros"))
-                {
-                    _navigationManager.NavigateTo("/login");
-                }
+                textBtnLogin = "Iniciar sesión";
+                _isAdmin = false;
             }
-            
-            StateHasChanged();
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error en LoginChanged: {ex.Message}");
+            Console.WriteLine($"Error checking authentication: {ex.Message}");
             _isLogued = false;
-            _userLogued = null;
-            StateHasChanged();
-        }
-    }
-
-    private async Task CargarUsuarioAsync()
-    {
-        try
-        {
-            if (!string.IsNullOrWhiteSpace(_userLogued?.Email))
-            {
-                _usuarioLogueado = await _usuarioService.GetByEmailAsync(_userLogued.Email);
-
-                // Guardar el usuario en caché para que otras páginas puedan accederlo
-                if (_usuarioLogueado != null)
-                {
-                    _memoryCache.Set("usuarioLogueado", _usuarioLogueado);
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.Error.WriteLine(ex);
-        }
-    }
-
-    public void Dispose()
-    {
-        // Desuscribirse del evento para evitar memory leaks
-        if (_firebaseAuthService != null)
-        {
-            _firebaseAuthService.OnChangeLogin -= LoginChanged;
+            _isAdmin = false;
         }
     }
 }
-
-@implements IDisposable
 
 <style>
     .nav-section-title {

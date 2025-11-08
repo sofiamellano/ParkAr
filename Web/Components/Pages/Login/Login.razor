@@ -117,7 +117,6 @@ else
         {
             isAuthenticated = await _firebaseAuthService.IsUserAuthenticated();
             
-            // Si ya está autenticado, redirigir según el rol
             if (isAuthenticated && _firebaseAuthService.CurrentUser != null)
             {
                 await RedirectByUserRole(_firebaseAuthService.CurrentUser.Email);
@@ -148,12 +147,12 @@ else
                     return;
                 }
 
-                // Obtener usuario de la base de datos
-                var usuario = await _usuarioService.GetByEmailAsync(email);
+                // ✅ Verificar si el usuario está bloqueado o existe
+                var usuario = await ValidarUsuario(email);
                 
                 if (usuario == null)
                 {
-                    await _sweetAlert.FireAsync("Error", "El usuario no está registrado en el sistema.", SweetAlertIcon.Error);
+                    // El usuario fue bloqueado o no existe
                     await _firebaseAuthService.SignOut();
                     return;
                 }
@@ -187,17 +186,85 @@ else
         }
     }
 
+    /// <summary>
+    /// Valida si el usuario existe y no está bloqueado
+    /// </summary>
+    private async Task<Usuario?> ValidarUsuario(string userEmail)
+    {
+        try
+        {
+            // Intentar obtener usuario activo
+            var usuario = await _usuarioService.GetByEmailAsync(userEmail);
+            
+            if (usuario != null && !usuario.IsDeleted)
+            {
+                return usuario; // Usuario activo
+            }
+        }
+        catch (Exception ex)
+        {
+            // Si devuelve 404, puede ser que esté bloqueado
+            if (ex.Message.Contains("NotFound") || ex.Message.Contains("404"))
+            {
+                // Verificar si está en la lista de eliminados
+                var bloqueados = await _usuarioService.GetAllDeletedsAsync();
+                var usuarioBloqueado = bloqueados?.FirstOrDefault(u => u.Email.Equals(userEmail, StringComparison.OrdinalIgnoreCase));
+                
+                if (usuarioBloqueado != null)
+                {
+                    await _sweetAlert.FireAsync(new SweetAlertOptions
+                    {
+                        Title = "Cuenta bloqueada",
+                        Html = @"
+                            <div class='text-start'>
+                                <p>Tu cuenta ha sido <strong>bloqueada por un administrador</strong>.</p>
+                                <hr>
+                                <p><i class='bi bi-info-circle me-2'></i>Si crees que esto es un error, contacta con el soporte.</p>
+                            </div>
+                        ",
+                        Icon = SweetAlertIcon.Warning,
+                        ConfirmButtonText = "Entendido",
+                        ConfirmButtonColor = "#dc3545"
+                    });
+                    return null; // Usuario bloqueado
+                }
+                
+                // No existe en activos ni bloqueados
+                await _sweetAlert.FireAsync("Error", "El usuario no está registrado en el sistema.", SweetAlertIcon.Error);
+                return null;
+            }
+            
+            // Otro tipo de error
+            throw;
+        }
+        
+        // Usuario existe pero está marcado como eliminado (soft delete)
+        await _sweetAlert.FireAsync(new SweetAlertOptions
+        {
+            Title = "Cuenta bloqueada",
+            Html = @"
+                <div class='text-start'>
+                    <p>Tu cuenta ha sido <strong>bloqueada por un administrador</strong>.</p>
+                    <hr>
+                    <p><i class='bi bi-info-circle me-2'></i>Si crees que esto es un error, contacta con el soporte.</p>
+                </div>
+            ",
+            Icon = SweetAlertIcon.Warning,
+            ConfirmButtonText = "Entendido",
+            ConfirmButtonColor = "#dc3545"
+        });
+        return null;
+    }
+
     private async Task RedirectByUserRole(string userEmail)
     {
         try
         {
-            var usuario = await _usuarioService.GetByEmailAsync(userEmail);
+            var usuario = await ValidarUsuario(userEmail);
             
             if (usuario == null)
             {
-                // Si no existe en BD, cerrar sesión y mostrar error
                 await _firebaseAuthService.SignOut();
-                await _sweetAlert.FireAsync("Error", "El usuario no está registrado en el sistema.", SweetAlertIcon.Error);
                 return;
             }
 
@@ -214,7 +281,6 @@ else
         catch (Exception ex)
         {
             Console.WriteLine($"Error al redirigir: {ex.Message}");
-            // Si hay error, redirigir al dashboard de miembros por defecto
             _navigationManager.NavigateTo("/miembros/dashboard", forceLoad: true);
         }
     }
@@ -246,12 +312,10 @@ else
             
             if (user != null)
             {
-                // Obtener usuario de la base de datos
-                var usuario = await _usuarioService.GetByEmailAsync(user.Email);
+                var usuario = await ValidarUsuario(user.Email);
                 
                 if (usuario == null)
                 {
-                    await _sweetAlert.FireAsync("Error", "El usuario no está registrado en el sistema. Por favor, regístrate primero.", SweetAlertIcon.Error);
                     await _firebaseAuthService.SignOut();
                     return;
                 }
@@ -259,12 +323,11 @@ else
                 isAuthenticated = true;
                 await _firebaseAuthService.IsUserAuthenticated();
 
-                // ✅ Redirigir según el rol del usuario
                 if (usuario.TipoUsuario == TipoUsuarioEnum.Admin)
                 {
                     _navigationManager.NavigateTo("/admin/dashboard", forceLoad: true);
                 }
-                else // Cliente
+                else
                 {
                     _navigationManager.NavigateTo("/miembros/dashboard", forceLoad: true);
                 }

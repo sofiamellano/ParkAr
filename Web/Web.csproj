@@ -17,7 +17,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Components\Pages\Miembros\Historial\" />
+    <Folder Include="Components\Pages\Admin\Lugares\" />
+    <Folder Include="Components\Pages\Admin\Reservas\" />
   </ItemGroup>
 
 </Project>

@@ -1,0 +1,282 @@
+﻿@page "/admin/usuarios"
+@inject IUsuarioService _usuarioService
+@inject IVehiculoService _vehiculoService
+@inject IReservaService _reservaService
+@inject FirebaseAuthService _firebaseAuthService
+@inject SweetAlertService _sweetAlert
+@inject NavigationManager _navigationManager
+@rendermode InteractiveServer
+
+<PageTitle>Gestión de Usuarios - Admin ParkAR</PageTitle>
+
+@if (!isAuthenticated && !isLoading)
+{
+    <MensajeAccesoRestringido />
+}
+else if (isLoading)
+{
+    <SpinnerCarga Mensaje="Cargando usuarios..." />
+}
+else if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="container-fluid py-5">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="alert alert-danger" role="alert">
+                    <h4 class="alert-heading">
+                        <i class="bi bi-exclamation-triangle me-2"></i>Error al cargar usuarios
+                    </h4>
+                    <p>@errorMessage</p>
+                    <hr>
+                    <button class="btn btn-outline-danger" @onclick="RetryCargarDatos">
+                        <i class="bi bi-arrow-clockwise me-2"></i>Reintentar
+                    </button>
+                    <button class="btn btn-outline-secondary ms-2" @onclick='() => _navigationManager.NavigateTo("/admin/dashboard")'>
+                        <i class="bi bi-house me-2"></i>Volver al Dashboard
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    <div class="container-fluid py-4">
+        <BreadcrumbAdmin Pagina="Gestión de Usuarios" />
+
+        <HeaderSeccion Titulo="Gestión de Usuarios"
+                       Descripcion="Administra las cuentas de usuarios del sistema"
+                       Badge="@($"{usuariosTotales.Count} usuarios")" />
+
+        <FiltrosUsuarios @bind-SearchText="searchText"
+                         @bind-FiltroTipo="filtroTipoUsuario"
+                         @bind-MostrarEliminados="mostrarEliminados"
+                         OnAplicarFiltros="EventCallback.Factory.Create(this, AplicarFiltros)" />
+
+        @if (mostrarEliminados && usuariosFiltrados.Any(u => u.IsDeleted))
+        {
+            <div class="alert alert-info mb-3">
+                <i class="bi bi-info-circle me-2"></i>
+                Mostrando <strong>@usuariosFiltrados.Count(u => u.IsDeleted)</strong> usuario(s) bloqueado(s)
+            </div>
+        }
+
+        <TablaUsuarios Usuarios="usuariosFiltrados"
+                       VehiculosPorUsuario="vehiculosPorUsuario"
+                       ReservasPorUsuario="reservasPorUsuario"
+                       OnVerDetalle="VerDetalleUsuario"
+                       OnBloquear="BloquearUsuario"
+                       OnHabilitar="HabilitarUsuario" />
+    </div>
+}
+
+@code {
+    private bool isAuthenticated = false;
+    private bool isLoading = true;
+    private Usuario? usuarioAdmin;
+    private string errorMessage = "";
+
+    private List<Usuario> usuariosTotales = new();  // ✅ Todos los usuarios (incluye bloqueados)
+    private List<Usuario> usuariosFiltrados = new();
+    private Dictionary<int, int> vehiculosPorUsuario = new();
+    private Dictionary<int, int> reservasPorUsuario = new();
+
+    private string searchText = "";
+    private string filtroTipoUsuario = "";
+    private bool mostrarEliminados = false;  // ✅ Nuevo flag
+
+    protected override async Task OnInitializedAsync()
+    {
+        await InicializarPagina();
+    }
+
+    private async Task InicializarPagina()
+    {
+        try
+        {
+            errorMessage = "";
+            isAuthenticated = await VerificarAutenticacionAdmin();
+
+            if (isAuthenticated)
+            {
+                await CargarDatos();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error al cargar usuarios: {ex.Message}");
+            errorMessage = ex.Message;
+            isAuthenticated = false;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task RetryCargarDatos()
+    {
+        isLoading = true;
+        errorMessage = "";
+        StateHasChanged();
+        await InicializarPagina();
+    }
+
+    private async Task<bool> VerificarAutenticacionAdmin()
+    {
+        var isAuth = await _firebaseAuthService.IsUserAuthenticated();
+        if (!isAuth) return false;
+
+        var firebaseUser = _firebaseAuthService.CurrentUser;
+        if (firebaseUser == null) return false;
+
+        var usuariosTemp = await _usuarioService.GetAllAsync();
+        usuarioAdmin = usuariosTemp?.FirstOrDefault(u => u.Email == firebaseUser.Email);
+
+        return usuarioAdmin?.TipoUsuario == Service.Enums.TipoUsuarioEnum.Admin;
+    }
+
+    private async Task CargarDatos()
+    {
+        // ✅ Cargar TODOS los usuarios (activos + bloqueados)
+        var usuariosActivos = await _usuarioService.GetAllAsync() ?? new List<Usuario>();
+        var usuariosBloqueados = await _usuarioService.GetAllDeletedsAsync() ?? new List<Usuario>();
+        
+        usuariosTotales = usuariosActivos.Concat(usuariosBloqueados).ToList();
+
+        Console.WriteLine($"Usuarios activos: {usuariosActivos.Count}, Bloqueados: {usuariosBloqueados.Count}, Total: {usuariosTotales.Count}");
+
+        var todosVehiculos = await _vehiculoService.GetAllAsync();
+        vehiculosPorUsuario = todosVehiculos?
+            .GroupBy(v => v.UsuarioId)
+            .ToDictionary(g => g.Key, g => g.Count()) ?? new();
+
+        var todasReservas = await _reservaService.GetAllAsync();
+        reservasPorUsuario = todasReservas?
+            .GroupBy(r => r.UsuarioId)
+            .ToDictionary(g => g.Key, g => g.Count()) ?? new();
+
+        await AplicarFiltros();
+    }
+
+    private async Task AplicarFiltros()
+    {
+        Console.WriteLine($"=== AplicarFiltros ===");
+        Console.WriteLine($"SearchText: '{searchText}'");
+        Console.WriteLine($"FiltroTipoUsuario: '{filtroTipoUsuario}'");
+        Console.WriteLine($"MostrarEliminados: {mostrarEliminados}");
+        Console.WriteLine($"Total usuarios: {usuariosTotales.Count}");
+
+        usuariosFiltrados = usuariosTotales.Where(u =>
+        {
+            // ✅ Filtro de eliminados
+            bool cumpleEliminado = mostrarEliminados ? u.IsDeleted : !u.IsDeleted;
+
+            // Filtro de búsqueda
+            bool cumpleBusqueda = string.IsNullOrWhiteSpace(searchText) ||
+                 u.Nombre.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+                 u.Email.Contains(searchText, StringComparison.OrdinalIgnoreCase);
+
+            // Filtro de tipo
+            bool cumpleTipo = string.IsNullOrWhiteSpace(filtroTipoUsuario) ||
+                 u.TipoUsuario.ToString() == filtroTipoUsuario;
+
+            return cumpleEliminado && cumpleBusqueda && cumpleTipo;
+        }).ToList();
+
+        Console.WriteLine($"Usuarios filtrados: {usuariosFiltrados.Count}");
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task VerDetalleUsuario(Usuario usuario)
+    {
+        var vehiculos = vehiculosPorUsuario.GetValueOrDefault(usuario.Id, 0);
+        var reservas = reservasPorUsuario.GetValueOrDefault(usuario.Id, 0);
+        var estado = usuario.IsDeleted ? "Bloqueado" : "Activo";
+        var estadoClass = usuario.IsDeleted ? "bg-danger" : "bg-success";
+
+        await _sweetAlert.FireAsync(new SweetAlertOptions
+        {
+            Title = $"Detalles de {usuario.Nombre}",
+            Html = $@"
+                <div class='text-start'>
+                    <p><strong>Email:</strong> {usuario.Email}</p>
+                    <p><strong>Tipo:</strong> <span class='badge bg-primary'>{usuario.TipoUsuario}</span></p>
+                    <p><strong>Estado:</strong> <span class='badge {estadoClass}'>{estado}</span></p>
+                    <hr>
+                    <p><strong>Vehículos registrados:</strong> {vehiculos}</p>
+                    <p><strong>Total de reservas:</strong> {reservas}</p>
+                </div>
+            ",
+            Icon = SweetAlertIcon.Info
+        });
+    }
+
+    private async Task BloquearUsuario(Usuario usuario)
+    {
+        await CambiarEstadoUsuario(usuario, true, "Bloquear", "bloqueado", SweetAlertIcon.Warning);
+    }
+
+    private async Task HabilitarUsuario(Usuario usuario)
+    {
+        await CambiarEstadoUsuario(usuario, false, "Habilitar", "habilitado", SweetAlertIcon.Question);
+    }
+
+    private async Task CambiarEstadoUsuario(Usuario usuario, bool bloquear, string accion, string accionPasado, SweetAlertIcon icono)
+    {
+        string advertenciaHtml = bloquear
+            ? "<div class='alert alert-warning mt-3'><i class='bi bi-exclamation-triangle me-2'></i> El usuario no podrá acceder al sistema hasta que sea habilitado nuevamente.</div>"
+            : "";
+
+        var resultado = await _sweetAlert.FireAsync(new SweetAlertOptions
+        {
+            Title = $"{accion} Usuario",
+            Html = $@"
+                <p>¿Estás seguro de que deseas {accion.ToLower()} a <strong>{usuario.Nombre}</strong>?</p>
+                {advertenciaHtml}
+            ",
+            Icon = icono,
+            ShowCancelButton = true,
+            ConfirmButtonText = $"Sí, {accion}",
+            CancelButtonText = "Cancelar",
+            ConfirmButtonColor = bloquear ? "#dc3545" : "#198754"
+        });
+
+        if (resultado.IsConfirmed)
+        {
+            try
+            {
+                var usuarioDb = await _usuarioService.GetByIdAsync(usuario.Id);
+                
+                if (usuarioDb == null)
+                {
+                    await _sweetAlert.FireAsync("Error", "No se encontró el usuario", SweetAlertIcon.Error);
+                    return;
+                }
+
+                usuarioDb.IsDeleted = bloquear;
+                var resultadoUpdate = await _usuarioService.UpdateAsync(usuarioDb);
+
+                if (!resultadoUpdate)
+                {
+                    await _sweetAlert.FireAsync("Error", "No se pudo actualizar el usuario", SweetAlertIcon.Error);
+                    return;
+                }
+
+                await _sweetAlert.FireAsync(
+                    $"{accion}do",
+                    $"Usuario {usuario.Nombre} {accionPasado} correctamente",
+                    SweetAlertIcon.Success
+                );
+
+                await CargarDatos();
+                await InvokeAsync(StateHasChanged);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ EXCEPCIÓN al {accion.ToLower()} usuario: {ex.Message}");
+                await _sweetAlert.FireAsync("Error", $"No se pudo {accion.ToLower()} el usuario: {ex.Message}", SweetAlertIcon.Error);
+            }
+        }
+    }
+}

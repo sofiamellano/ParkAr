@@ -1,0 +1,14 @@
+@code {
+    [Parameter] public string Pagina { get; set; } = "";
+}
+
+<nav aria-label="breadcrumb" class="mb-4">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item">
+            <a href="/admin/dashboard" class="text-decoration-none">
+                <i class="bi bi-speedometer2 me-1"></i>Dashboard
+            </a>
+        </li>
+        <li class="breadcrumb-item active" aria-current="page">@Pagina</li>
+    </ol>
+</nav>

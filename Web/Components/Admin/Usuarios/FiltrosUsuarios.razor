@@ -1,0 +1,119 @@
+@* ============================
+   COMPONENTE: FiltroUsuarios
+   ============================ *@
+
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <div class="row g-3 align-items-center">
+                    <!-- Campo de búsqueda -->
+                    <div class="col-md-5">
+                        <div class="input-group">
+                            <span class="input-group-text bg-light">
+                                <i class="bi bi-search"></i>
+                            </span>
+
+                            <input type="text"
+                                   class="form-control"
+                                   placeholder="Buscar por nombre o email..."
+                                   value="@SearchText"
+                                   @oninput="OnSearchInput" />
+
+                            @if (!string.IsNullOrWhiteSpace(SearchText))
+                            {
+                                <button class="btn btn-outline-secondary"
+                                        title="Limpiar búsqueda"
+                                        type="button"
+                                        @onclick="LimpiarBusqueda">
+                                    <i class="bi bi-x-lg"></i>
+                                </button>
+                            }
+                        </div>
+                    </div>
+
+                    <!-- Filtro por tipo -->
+                    <div class="col-md-3">
+                        <select class="form-select" 
+                                value="@FiltroTipo" 
+                                @onchange="OnFiltroTipoChange">
+                            <option value="">Todos los tipos</option>
+                            <option value="Cliente">Clientes</option>
+                            <option value="Admin">Administradores</option>
+                        </select>
+                    </div>
+
+                    <!-- Toggle Ver Eliminados -->
+                    <div class="col-md-2">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" 
+                                   type="checkbox" 
+                                   role="switch" 
+                                   id="switchEliminados"
+                                   checked="@MostrarEliminados"
+                                   @onchange="OnMostrarEliminadosChange" />
+                            <label class="form-check-label" for="switchEliminados">
+                                <i class="bi bi-eye-slash me-1"></i>Ver bloqueados
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Botón aplicar -->
+                    <div class="col-md-2">
+                        <button class="btn btn-outline-primary w-100" type="button" @onclick="AplicarFiltros">
+                            <i class="bi bi-funnel me-2"></i>Filtrar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    // --- Parámetros con binding bidireccional ---
+    [Parameter] public string SearchText { get; set; } = "";
+    [Parameter] public EventCallback<string> SearchTextChanged { get; set; }
+
+    [Parameter] public string FiltroTipo { get; set; } = "";
+    [Parameter] public EventCallback<string> FiltroTipoChanged { get; set; }
+
+    [Parameter] public bool MostrarEliminados { get; set; } = false;
+    [Parameter] public EventCallback<bool> MostrarEliminadosChanged { get; set; }
+
+    // --- Evento al aplicar filtros ---
+    [Parameter] public EventCallback OnAplicarFiltros { get; set; }
+
+    private async Task OnSearchInput(ChangeEventArgs e)
+    {
+        SearchText = e.Value?.ToString() ?? "";
+        await SearchTextChanged.InvokeAsync(SearchText);
+        await OnAplicarFiltros.InvokeAsync();
+    }
+
+    private async Task OnFiltroTipoChange(ChangeEventArgs e)
+    {
+        FiltroTipo = e.Value?.ToString() ?? "";
+        await FiltroTipoChanged.InvokeAsync(FiltroTipo);
+        await OnAplicarFiltros.InvokeAsync();
+    }
+
+    private async Task OnMostrarEliminadosChange(ChangeEventArgs e)
+    {
+        MostrarEliminados = e.Value is bool value && value;
+        await MostrarEliminadosChanged.InvokeAsync(MostrarEliminados);
+        await OnAplicarFiltros.InvokeAsync();
+    }
+
+    private async Task AplicarFiltros()
+    {
+        await OnAplicarFiltros.InvokeAsync();
+    }
+
+    private async Task LimpiarBusqueda()
+    {
+        SearchText = "";
+        await SearchTextChanged.InvokeAsync(SearchText);
+        await OnAplicarFiltros.InvokeAsync();
+    }
+}

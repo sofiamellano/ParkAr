@@ -40,21 +40,6 @@
                 </div>
 
                 <div class="mb-3">
-                    <label class="form-label fw-semibold" for="tipoUsuario">Tipo de Usuario <span class="text-danger">*</span></label>
-                    <div class="input-group input-group-lg">
-                        <span class="input-group-text bg-light-subtle">
-                            <i class="bi bi-person-badge"></i>
-                        </span>
-                        <InputSelect id="tipoUsuario" class="form-select" @bind-Value="usuario.TipoUsuario">
-                            @foreach (var value in Enum.GetValues<TipoUsuarioEnum>())
-                            {
-                                <option value="@value">@value</option>
-                            }
-                        </InputSelect>
-                    </div>
-                </div>
-
-                <div class="mb-3">
                     <label class="form-label fw-semibold" for="password">Contraseña <span class="text-danger">*</span></label>
                     <div class="input-group input-group-lg">
                         <span class="input-group-text bg-light-subtle">
@@ -142,6 +127,9 @@
 
         try
         {
+            // ✅ Asegurar que siempre sea Cliente
+            usuario.TipoUsuario = TipoUsuarioEnum.Cliente;
+
             // 1) Crear en Firebase
             var loginResponse = await firebaseAuthService.createUserWithEmailAndPassword(usuario.Email, usuario.Password, usuario.Nombre);
             if (string.IsNullOrEmpty(loginResponse?.UserUid))
