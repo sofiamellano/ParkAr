@@ -3,12 +3,14 @@ using CommunityToolkit.Mvvm.Input;
 using Service.DTOs;
 using Service.Interfaces;
 using Service.Services;
+using Service.Models;
 
 namespace AppMovil.ViewModels;
 
 public partial class LoginPageViewModel : BaseViewModel
 {
     AuthService _authService;
+    UsuarioService _usuarioService;
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(LoginCommand))]
@@ -28,6 +30,7 @@ public partial class LoginPageViewModel : BaseViewModel
     public LoginPageViewModel()
     {
         _authService = new AuthService();
+        _usuarioService = new UsuarioService();
         Title = "Iniciar Sesión";
         LoginCommand = new AsyncRelayCommand(OnLogin, CanLogin);
         GoToRegisterCommand = new AsyncRelayCommand(GoToRegister);
@@ -59,22 +62,45 @@ public partial class LoginPageViewModel : BaseViewModel
 
             var response = await _authService.Login(loginDto);
 
-            // Si response es null = login exitoso
+            // Si response es null = login exitoso en Firebase
             if (response == null)
             {
-                // ✅ LOGIN EXITOSO - Usar ID que coincida con tu BD
-                // Para pruebas, usar ID 1 o 2 que existen en tu BD
-                var userId = 1; // O puedes usar lógica basada en el email
+                Usuario? usuario = null;
                 
-                // Opcional: Lógica para diferentes usuarios
-                if (Email.Contains("usuario2") || Email.Contains("test2"))
+                try
                 {
-                    userId = 2;
+                    // ✅ Buscar el usuario en la base de datos por email
+                    usuario = await _usuarioService.GetByEmailAsync(Email);
+                }
+                catch (Exception ex)
+                {
+                    // Si el error contiene "NotFound", el usuario no existe en la BD
+                    if (ex.Message.Contains("NotFound") || ex.Message.Contains("404"))
+                    {
+                        await Application.Current.MainPage.DisplayAlert(
+                            "Usuario no registrado", 
+                            $"El correo '{Email}' no está registrado en la base de datos.\n\nPor favor, contacta al administrador para completar tu registro.", 
+                            "OK");
+                        return;
+                    }
+                    
+                    // Otro tipo de error
+                    throw;
                 }
                 
-                // Guardar datos del usuario en preferencias
-                Preferences.Set("UserLoginId", userId);
-                Preferences.Set("UserEmail", Email);
+                if (usuario == null)
+                {
+                    // Usuario no existe en la BD MySQL
+                    await Application.Current.MainPage.DisplayAlert(
+                        "Usuario no registrado", 
+                        $"El correo '{Email}' no está registrado en la base de datos.\n\nPor favor, contacta al administrador para completar tu registro.", 
+                        "OK");
+                    return;
+                }
+
+                // ✅ Usuario válido - guardar datos reales
+                Preferences.Set("UserLoginId", usuario.Id);
+                Preferences.Set("UserEmail", usuario.Email);
 
                 // ✅ Usar siempre el AppShell actual
                 if (Application.Current?.MainPage is AppShell shell)

@@ -4,7 +4,7 @@
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:viewmodels="clr-namespace:AppMovil.ViewModels"
-    Title="{Binding Title}"
+    Title="Registrarse"
     Shell.NavBarIsVisible="False"
     BackgroundColor="#F8F9FA"
     x:DataType="viewmodels:RegisterPageViewModel">
@@ -77,7 +77,7 @@
 
                 <!-- Email Input -->
                 <StackLayout Spacing="8">
-                    <Label Text="Correo Electronico" 
+                    <Label Text="Correo Electrónico" 
                            FontSize="14" 
                            FontAttributes="Bold"
                            TextColor="#2C3E50"
@@ -98,32 +98,9 @@
                     </Frame>
                 </StackLayout>
 
-                <!-- Phone Input -->
-                <StackLayout Spacing="8">
-                    <Label Text="Telefono (Opcional)" 
-                           FontSize="14" 
-                           FontAttributes="Bold"
-                           TextColor="#2C3E50"
-                           Margin="10,0,0,0" />
-                    <Frame BackgroundColor="White" 
-                           BorderColor="#E1E8ED" 
-                           CornerRadius="12"
-                           HasShadow="False"
-                           Padding="0">
-                        <Entry Text="{Binding PhoneNumber}"
-                               Placeholder="+54 9 11 1234-5678"
-                               Keyboard="Telephone"
-                               FontSize="16"
-                               TextColor="#2C3E50"
-                               PlaceholderColor="#95A5A6"
-                               ClearButtonVisibility="WhileEditing"
-                               Margin="15,10" />
-                    </Frame>
-                </StackLayout>
-
                 <!-- Password Input -->
                 <StackLayout Spacing="8">
-                    <Label Text="Contrasena" 
+                    <Label Text="Contraseña" 
                            FontSize="14" 
                            FontAttributes="Bold"
                            TextColor="#2C3E50"
@@ -134,7 +111,7 @@
                            HasShadow="False"
                            Padding="0">
                         <Entry Text="{Binding Password}"
-                               Placeholder="Minimo 6 caracteres"
+                               Placeholder="Mínimo 6 caracteres"
                                IsPassword="True"
                                FontSize="16"
                                TextColor="#2C3E50"
@@ -146,7 +123,7 @@
 
                 <!-- Confirm Password Input -->
                 <StackLayout Spacing="8">
-                    <Label Text="Confirmar Contrasena" 
+                    <Label Text="Confirmar Contraseña" 
                            FontSize="14" 
                            FontAttributes="Bold"
                            TextColor="#2C3E50"
@@ -157,12 +134,33 @@
                            HasShadow="False"
                            Padding="0">
                         <Entry Text="{Binding ConfirmPassword}"
-                               Placeholder="Repite tu contrasena"
+                               Placeholder="Repite tu contraseña"
                                IsPassword="True"
                                FontSize="16"
                                TextColor="#2C3E50"
                                PlaceholderColor="#95A5A6"
                                ClearButtonVisibility="WhileEditing"
+                               Margin="15,10" />
+                    </Frame>
+                </StackLayout>
+
+                <!-- Tipo Usuario (Solo lectura) -->
+                <StackLayout Spacing="8">
+                    <Label Text="Tipo de Usuario" 
+                           FontSize="14" 
+                           FontAttributes="Bold"
+                           TextColor="#2C3E50"
+                           Margin="10,0,0,0" />
+                    <Frame BackgroundColor="#ECF0F1" 
+                           BorderColor="#E1E8ED" 
+                           CornerRadius="12"
+                           HasShadow="False"
+                           Padding="0">
+                        <Entry Text="{Binding TipoUsuario}"
+                               FontSize="16"
+                               TextColor="#2C3E50"
+                               IsReadOnly="True"
+                               BackgroundColor="Transparent"
                                Margin="15,10" />
                     </Frame>
                 </StackLayout>
@@ -230,12 +228,12 @@
                 <StackLayout Orientation="Horizontal" 
                            HorizontalOptions="Center" 
                            Spacing="5">
-                    <Label Text="Ya tienes una cuenta?" 
+                    <Label Text="¿Ya tienes una cuenta?" 
                            FontSize="15" 
                            TextColor="#7F8C8D" 
                            VerticalOptions="Center" />
-                    <Button Text="Iniciar Sesion" 
-                            Command="{Binding GoToLoginCommand}"
+                    <Button Text="Iniciar Sesión" 
+                            Command="{Binding VolverCommand}"
                             BackgroundColor="Transparent"
                             TextColor="#4A90E2"
                             FontSize="15"
@@ -245,7 +243,7 @@
                 </StackLayout>
 
                 <!-- Terms and Privacy -->
-                <Label Text="Al crear una cuenta, aceptas nuestros Terminos y Condiciones y Politica de Privacidad"
+                <Label Text="Al crear una cuenta, aceptas nuestros Términos y Condiciones y Política de Privacidad"
                        HorizontalOptions="Center" 
                        HorizontalTextAlignment="Center"
                        FontSize="12"
