@@ -1,0 +1,424 @@
+﻿@page "/miembros/reservas/crear"
+@page "/miembros/reservas/editar/{ReservaId:int}"
+@inject IUsuarioService _usuarioService
+@inject IReservaService _reservaService
+@inject IVehiculoService _vehiculoService
+@inject ILugarService _lugarService
+@inject FirebaseAuthService _firebaseAuthService
+@inject SweetAlertService _sweetAlert
+@inject NavigationManager _navigationManager
+@rendermode InteractiveServer
+
+<PageTitle>@titulo - ParkAR</PageTitle>
+
+@if (!isAuthenticated && !isLoading)
+{
+    <div class="container-fluid py-5">
+        <div class="row justify-content-center">
+            <div class="col-md-6 text-center">
+                <i class="bi bi-shield-lock display-1 text-muted"></i>
+                <h3 class="mt-3">Acceso Restringido</h3>
+                <p class="text-muted">Debes iniciar sesión para crear reservas.</p>
+                <button class="btn btn-primary" @onclick='() => _navigationManager.NavigateTo("/login")'>
+                    <i class="bi bi-box-arrow-in-right me-2"></i>Iniciar Sesión
+                </button>
+            </div>
+        </div>
+    </div>
+}
+else if (isLoading)
+{
+    <div class="container-fluid py-5">
+        <div class="row justify-content-center">
+            <div class="col-md-6 text-center">
+                <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+                    <span class="visually-hidden">Cargando...</span>
+                </div>
+                <h5 class="mt-3">Cargando formulario...</h5>
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    <div class="container-fluid py-4">
+        <!-- Breadcrumb -->
+        <BreadcrumbNav Items="breadcrumbItems" />
+
+        <!-- Header -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card bg-primary text-white border-0 shadow-sm">
+                    <div class="card-body text-center py-4">
+                        <i class="bi bi-p-square display-4 mb-3"></i>
+                        <h2 class="fw-bold mb-2">@titulo</h2>
+                        <p class="mb-0 opacity-75">@subtitulo</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <EditForm Model="@this" OnValidSubmit="GuardarReserva">
+                    
+                    <!-- Componentes modulares -->
+                    <SelectorVehiculo Vehiculos="vehiculos" 
+                                     VehiculoSeleccionadoId="vehiculoSeleccionadoId"
+                                     VehiculoSeleccionadoIdChanged="OnVehiculoSeleccionadoChanged" />
+
+                    <SelectorPlaza LugaresDisponibles="lugaresDisponibles" 
+                                  LugarSeleccionadoId="lugarSeleccionadoId"
+                                  LugarSeleccionadoIdChanged="OnLugarSeleccionadoChanged" />
+
+                    <SelectorFechaHora @bind-FechaInicio="@fechaInicio"
+                                      @bind-HoraInicio="@horaInicio"
+                                      OnCambio="ActualizarLugaresDisponibles" />
+
+                    <SelectorDuracion @bind-Duracion="duracion"
+                                     OnCambio="OnDuracionChanged" />
+
+                    <!-- Mensaje de Error -->
+                    @if (mostrarError)
+                    {
+                        <div class="alert alert-danger" role="alert">
+                            <i class="bi bi-exclamation-triangle me-2"></i>
+                            @mensajeError
+                        </div>
+                    }
+
+                    <!-- Resumen -->
+                    <ResumenReserva MostrarResumen="puedeCrearReserva"
+               VehiculoPatente="@(ObtenerVehiculoSeleccionado()?.Patente ?? "")"
+               PlazaNumero="@(ObtenerLugarSeleccionado()?.Numero ?? 0)"
+               FechaInicio="@fechaInicio"
+               HoraInicio="@horaInicio"
+               Duracion="duracion" />
+
+                    <!-- Botones -->
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <button type="button" class="btn btn-outline-danger w-100 btn-lg" 
+                                    @onclick="Cancelar">
+                                <i class="bi bi-x-circle me-2"></i>Cancelar
+                            </button>
+                        </div>
+                        <div class="col-md-6">
+                            <button type="submit" 
+                                    class="btn btn-primary w-100 btn-lg" 
+                                    disabled="@(!puedeCrearReserva || isLoading)">
+                                @if (isLoading)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                }
+                                <i class="bi bi-check-circle me-2"></i>
+                                @(esModoEdicion ? "Guardar Cambios" : "Crear Reserva")
+                            </button>
+                        </div>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public int? ReservaId { get; set; }
+
+    private bool isAuthenticated = false;
+    private bool isLoading = true;
+    private bool isInitialized = false;
+    private string? errorMessage;
+    private bool showError = false;
+    
+    private bool esModoEdicion => ReservaId.HasValue && ReservaId.Value > 0;
+    private string titulo => esModoEdicion ? "Modificar Reserva" : "Nueva Reserva";
+    private string subtitulo => esModoEdicion ? "Modifica los datos de tu reserva" : "Complete los datos para su reserva";
+
+    private Usuario? usuario;
+    private Reserva? reservaOriginal;
+    private List<Vehiculo> vehiculos = new();
+    private List<Lugar> lugaresDisponibles = new();
+
+    private int vehiculoSeleccionadoId = 0;
+    private int lugarSeleccionadoId = 0;
+    private DateTime fechaInicio = DateTime.Today.AddDays(1);
+    private string horaInicio = "09:00";
+    private TimeSpan duracion = TimeSpan.FromHours(2);
+
+    private bool puedeCrearReserva = false;
+    private bool mostrarError = false;
+    private string mensajeError = string.Empty;
+
+    private List<BreadcrumbNav.BreadcrumbItem> breadcrumbItems = new()
+    {
+        new("Dashboard", "/miembros/dashboard", "bi bi-house"),
+        new("Mis Reservas", "/miembros/reservas", "bi bi-calendar-check"),
+        new("Nueva Reserva", "#")
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            isAuthenticated = await _firebaseAuthService.IsUserAuthenticated();
+
+            if (isAuthenticated)
+            {
+                await CargarDatosUsuario();
+                await CargarVehiculos();
+
+                if (esModoEdicion)
+                {
+                    await CargarReservaParaEditar();
+                }
+
+                await ActualizarLugaresDisponibles();
+                ValidarFormulario();
+            }
+
+            isLoading = false;
+            isInitialized = true;
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error al cargar el formulario: {ex.Message}";
+            showError = true;
+            isAuthenticated = false;
+            isLoading = false;
+            isInitialized = true;
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            if (showError && !string.IsNullOrEmpty(errorMessage))
+            {
+                await _sweetAlert.FireAsync("Error", errorMessage, SweetAlertIcon.Error);
+                showError = false;
+            }
+        }
+    }
+
+    private async Task CargarDatosUsuario()
+    {
+        var firebaseUser = _firebaseAuthService.CurrentUser;
+        if (firebaseUser != null)
+        {
+            var usuarios = await _usuarioService.GetAllAsync();
+            usuario = usuarios?.FirstOrDefault(u => u.Email == firebaseUser.Email);
+            
+            if (usuario == null)
+            {
+                usuario = new Usuario
+                {
+                    Email = firebaseUser.Email,
+                    Nombre = firebaseUser.DisplayName ?? "Usuario",
+                    Password = "",
+                    TipoUsuario = Service.Enums.TipoUsuarioEnum.Cliente
+                };
+                usuario = await _usuarioService.AddAsync(usuario);
+            }
+        }
+    }
+
+    private async Task CargarVehiculos()
+    {
+        if (usuario == null) return;
+        var vehiculosList = await _vehiculoService.GetByUsuarioAsync(usuario.Id);
+        vehiculos = vehiculosList?.Where(v => !v.IsDeleted).ToList() ?? new List<Vehiculo>();
+
+        if (vehiculos.Any() && !esModoEdicion)
+        {
+            vehiculoSeleccionadoId = vehiculos.First().Id;
+        }
+    }
+
+    private async Task CargarReservaParaEditar()
+    {
+        if (!ReservaId.HasValue || usuario == null) return;
+
+        try
+        {
+            reservaOriginal = await _reservaService.GetByIdAsync(ReservaId.Value);
+
+            if (reservaOriginal == null)
+            {
+                errorMessage = "Reserva no encontrada";
+                showError = true;
+                return;
+            }
+
+            vehiculoSeleccionadoId = reservaOriginal.VehiculoId;
+            lugarSeleccionadoId = reservaOriginal.LugarId;
+            fechaInicio = reservaOriginal.FechaInicio.Date;
+            horaInicio = reservaOriginal.FechaInicio.ToString("HH:mm");
+            duracion = reservaOriginal.FechaFin - reservaOriginal.FechaInicio;
+
+            breadcrumbItems[2] = new("Editar Reserva", "#");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error al cargar la reserva: {ex.Message}";
+            showError = true;
+        }
+    }
+
+    private async Task ActualizarLugaresDisponibles()
+    {
+        var fechaHoraInicio = fechaInicio.Add(TimeSpan.Parse(horaInicio));
+        var fechaHoraFin = fechaHoraInicio.Add(duracion);
+
+        var lugaresDisponiblesList = await _lugarService.GetDisponiblesAsync(fechaHoraInicio, fechaHoraFin);
+        lugaresDisponibles = lugaresDisponiblesList?.ToList() ?? new List<Lugar>();
+
+        if (esModoEdicion && reservaOriginal != null && !lugaresDisponibles.Any(l => l.Id == reservaOriginal.LugarId))
+        {
+            var lugarOriginal = await _lugarService.GetByIdAsync(reservaOriginal.LugarId);
+            if (lugarOriginal != null)
+            {
+                lugaresDisponibles.Add(lugarOriginal);
+            }
+        }
+
+        ValidarFormulario();
+        StateHasChanged();
+    }
+
+    private async Task OnDuracionChanged()
+    {
+        await ActualizarLugaresDisponibles();
+        ValidarFormulario();
+    }
+
+    // ✅ AGREGAR ESTE MÉTODO AQUÍ
+    private async Task OnVehiculoSeleccionadoChanged(int nuevoId)
+    {
+        vehiculoSeleccionadoId = nuevoId;
+        ValidarFormulario();
+        StateHasChanged();
+    }
+
+    // ✅ AGREGAR ESTE MÉTODO AQUÍ
+    private async Task OnLugarSeleccionadoChanged(int nuevoId)
+    {
+        lugarSeleccionadoId = nuevoId;
+        ValidarFormulario();
+        StateHasChanged();
+    }
+
+    private void ValidarFormulario()
+    {
+        mostrarError = false;
+        mensajeError = string.Empty;
+
+        var fechaHoraInicio = fechaInicio.Add(TimeSpan.Parse(horaInicio));
+
+        if (vehiculoSeleccionadoId == 0)
+        {
+            mostrarError = true;
+            mensajeError = "Debe seleccionar un vehículo";
+            puedeCrearReserva = false;
+            return;
+        }
+
+        if (lugarSeleccionadoId == 0)
+        {
+            mostrarError = true;
+            mensajeError = "Debe seleccionar una plaza";
+            puedeCrearReserva = false;
+            return;
+        }
+
+        if (!esModoEdicion && fechaHoraInicio <= DateTime.Now)
+        {
+            mostrarError = true;
+            mensajeError = "La fecha y hora deben ser futuras";
+            puedeCrearReserva = false;
+            return;
+        }
+
+        if (duracion.TotalMinutes < 30)
+        {
+            mostrarError = true;
+            mensajeError = "La duración mínima es de 30 minutos";
+            puedeCrearReserva = false;
+            return;
+        }
+
+        if (duracion.TotalHours > 12)
+        {
+            mostrarError = true;
+            mensajeError = "La duración máxima es de 12 horas";
+            puedeCrearReserva = false;
+            return;
+        }
+
+        if (!lugaresDisponibles.Any())
+        {
+            mostrarError = true;
+            mensajeError = "No hay plazas disponibles para la fecha y hora seleccionada";
+            puedeCrearReserva = false;
+            return;
+        }
+
+        puedeCrearReserva = true;
+    }
+
+    private async Task GuardarReserva()
+    {
+        if (!puedeCrearReserva || usuario == null) return;
+
+        try
+        {
+            isLoading = true;
+
+            var fechaHoraInicio = fechaInicio.Add(TimeSpan.Parse(horaInicio));
+            var fechaHoraFin = fechaHoraInicio.Add(duracion);
+
+            if (esModoEdicion && reservaOriginal != null)
+            {
+                reservaOriginal.VehiculoId = vehiculoSeleccionadoId;
+                reservaOriginal.LugarId = lugarSeleccionadoId;
+                reservaOriginal.FechaInicio = fechaHoraInicio;
+                reservaOriginal.FechaFin = fechaHoraFin;
+
+                await _reservaService.UpdateAsync(reservaOriginal);
+                await _sweetAlert.FireAsync("¡Éxito!", "Reserva actualizada exitosamente", SweetAlertIcon.Success);
+            }
+            else
+            {
+                var nuevaReserva = new Reserva
+                {
+                    UsuarioId = usuario.Id,
+                    VehiculoId = vehiculoSeleccionadoId,
+                    LugarId = lugarSeleccionadoId,
+                    FechaInicio = fechaHoraInicio,
+                    FechaFin = fechaHoraFin,
+                    EstadoReserva = Service.Enums.EstadoReservaEnum.Activa
+                };
+
+                await _reservaService.AddAsync(nuevaReserva);
+                await _sweetAlert.FireAsync("¡Éxito!", "Reserva creada exitosamente", SweetAlertIcon.Success);
+            }
+
+            _navigationManager.NavigateTo("/miembros/reservas");
+        }
+        catch (Exception ex)
+        {
+            await _sweetAlert.FireAsync("Error", $"No se pudo {(esModoEdicion ? "actualizar" : "crear")} la reserva: {ex.Message}", SweetAlertIcon.Error);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void Cancelar() => _navigationManager.NavigateTo("/miembros/reservas");
+
+    private Vehiculo? ObtenerVehiculoSeleccionado() => vehiculos.FirstOrDefault(v => v.Id == vehiculoSeleccionadoId);
+
+    private Lugar? ObtenerLugarSeleccionado() => lugaresDisponibles.FirstOrDefault(l => l.Id == lugarSeleccionadoId);
+}

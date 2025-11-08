@@ -2,6 +2,7 @@
 @inject FirebaseAuthService _firebaseAuthService
 @inject SweetAlertService _sweetAlert
 @inject NavigationManager _navigationManager
+@inject IUsuarioService _usuarioService
 @rendermode InteractiveServer
 
 @if (!isAuthenticated)
@@ -51,15 +52,19 @@
                     </small>
                 </div>
 
-                <button class="btn btn-gradient w-100 mb-3" @onclick="Loguear">
+                <button class="btn btn-gradient w-100 mb-3" @onclick="Loguear" disabled="@isLoggingIn">
+                    @if (isLoggingIn)
+                    {
+                        <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                    }
                     <i class="bi bi-box-arrow-in-right me-1"></i> Acceder
                 </button>
 
                 <div class="d-grid gap-2 d-md-flex justify-content-md-between">
-                    <button class="btn btn-outline-secondary" @onclick="RegisterMe">
+                    <button class="btn btn-outline-secondary" @onclick="RegisterMe" disabled="@isLoggingIn">
                         <i class="bi bi-person-plus me-1"></i> Registrarme
                     </button>
-                    <button class="btn btn-outline-danger" @onclick="LoginWithGoogle">
+                    <button class="btn btn-outline-danger" @onclick="LoginWithGoogle" disabled="@isLoggingIn">
                         <i class="bi bi-google me-1"></i> Google
                     </button>
                 </div>
@@ -101,41 +106,73 @@ else
 
 @code {
     bool isAuthenticated = false;
+    bool isLoggingIn = false;
     string email = string.Empty;
     string password = string.Empty;
     bool rememberPassword = false;
-
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
             isAuthenticated = await _firebaseAuthService.IsUserAuthenticated();
+            
+            // Si ya está autenticado, redirigir según el rol
+            if (isAuthenticated && _firebaseAuthService.CurrentUser != null)
+            {
+                await RedirectByUserRole(_firebaseAuthService.CurrentUser.Email);
+            }
+            
             StateHasChanged();
         }
     }
 
     private async Task Loguear()
     {
+        if (isLoggingIn) return;
+
         try
         {
+            isLoggingIn = true;
+            StateHasChanged();
+
             Console.WriteLine("Loguear llamado");
             var user = await _firebaseAuthService.SignInWithEmailPassword(email, password, rememberPassword);
+            
             if (user != null)
             {
                 if(user.EmailVerified == false)
                 {
                     await _sweetAlert.FireAsync("Verificación de correo", "Por favor, verifica tu correo electrónico antes de iniciar sesión.", SweetAlertIcon.Warning);
+                    await _firebaseAuthService.SignOut();
                     return;
                 }
+
+                // Obtener usuario de la base de datos
+                var usuario = await _usuarioService.GetByEmailAsync(email);
+                
+                if (usuario == null)
+                {
+                    await _sweetAlert.FireAsync("Error", "El usuario no está registrado en el sistema.", SweetAlertIcon.Error);
+                    await _firebaseAuthService.SignOut();
+                    return;
+                }
+
                 isAuthenticated = true;
                 await _firebaseAuthService.IsUserAuthenticated();
-                StateHasChanged();
-                // Aquí podrías redirigir al usuario a otra página si es necesario
+
+                // ✅ Redirigir según el rol del usuario
+                if (usuario.TipoUsuario == TipoUsuarioEnum.Admin)
+                {
+                    _navigationManager.NavigateTo("/admin/dashboard", forceLoad: true);
+                }
+                else // Cliente
+                {
+                    _navigationManager.NavigateTo("/miembros/dashboard", forceLoad: true);
+                }
             }
             else
             {
-                // Manejar error de autenticación (mostrar mensaje, etc.)
                 await _sweetAlert.FireAsync("Error de autenticación", "Correo o contraseña incorrectos.", SweetAlertIcon.Error);
             }
         }
@@ -143,7 +180,43 @@ else
         {
             await _sweetAlert.FireAsync("Error", ex.Message, SweetAlertIcon.Error);
         }
-        
+        finally
+        {
+            isLoggingIn = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task RedirectByUserRole(string userEmail)
+    {
+        try
+        {
+            var usuario = await _usuarioService.GetByEmailAsync(userEmail);
+            
+            if (usuario == null)
+            {
+                // Si no existe en BD, cerrar sesión y mostrar error
+                await _firebaseAuthService.SignOut();
+                await _sweetAlert.FireAsync("Error", "El usuario no está registrado en el sistema.", SweetAlertIcon.Error);
+                return;
+            }
+
+            // Redirigir según el tipo de usuario
+            if (usuario.TipoUsuario == TipoUsuarioEnum.Admin)
+            {
+                _navigationManager.NavigateTo("/admin/dashboard", forceLoad: true);
+            }
+            else // Cliente
+            {
+                _navigationManager.NavigateTo("/miembros/dashboard", forceLoad: true);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error al redirigir: {ex.Message}");
+            // Si hay error, redirigir al dashboard de miembros por defecto
+            _navigationManager.NavigateTo("/miembros/dashboard", forceLoad: true);
+        }
     }
 
     private async Task Desloguear()
@@ -152,33 +225,68 @@ else
         email = string.Empty;
         password = string.Empty;
         await _firebaseAuthService.SignOut();
-        StateHasChanged();
+        _navigationManager.NavigateTo("/login", forceLoad: true);
     }
 
-    private async Task RegisterMe()
+    private void RegisterMe()
     {
         _navigationManager.NavigateTo("/signin");
-        
     }
+    
     private async Task LoginWithGoogle()
     {
-        var user = await _firebaseAuthService.LoginWithGoogle();
-        if (user != null)
+        if (isLoggingIn) return;
+
+        try
         {
-            isAuthenticated = true;
-            await _firebaseAuthService.IsUserAuthenticated();
+            isLoggingIn = true;
             StateHasChanged();
-            // Aquí podrías redirigir al usuario a otra página si es necesario
+
+            var user = await _firebaseAuthService.LoginWithGoogle();
+            
+            if (user != null)
+            {
+                // Obtener usuario de la base de datos
+                var usuario = await _usuarioService.GetByEmailAsync(user.Email);
+                
+                if (usuario == null)
+                {
+                    await _sweetAlert.FireAsync("Error", "El usuario no está registrado en el sistema. Por favor, regístrate primero.", SweetAlertIcon.Error);
+                    await _firebaseAuthService.SignOut();
+                    return;
+                }
+
+                isAuthenticated = true;
+                await _firebaseAuthService.IsUserAuthenticated();
+
+                // ✅ Redirigir según el rol del usuario
+                if (usuario.TipoUsuario == TipoUsuarioEnum.Admin)
+                {
+                    _navigationManager.NavigateTo("/admin/dashboard", forceLoad: true);
+                }
+                else // Cliente
+                {
+                    _navigationManager.NavigateTo("/miembros/dashboard", forceLoad: true);
+                }
+            }
+            else
+            {
+                await _sweetAlert.FireAsync("Error de autenticación", "No se pudo iniciar sesión con Google.", SweetAlertIcon.Error);
+            }
         }
-        else
+        catch (Exception ex)
         {
-            // Manejar error de autenticación (mostrar mensaje, etc.)
-            await _sweetAlert.FireAsync("Error de autenticación", "No se pudo iniciar sesión con Google.", SweetAlertIcon.Error);
+            await _sweetAlert.FireAsync("Error", ex.Message, SweetAlertIcon.Error);
+        }
+        finally
+        {
+            isLoggingIn = false;
+            StateHasChanged();
         }
     }
+    
     private void RecoveryPassword()
     {
         _navigationManager.NavigateTo("/recovery");
     }
-
 }

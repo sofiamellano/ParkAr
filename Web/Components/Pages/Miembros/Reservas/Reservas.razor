@@ -1,0 +1,340 @@
+﻿@page "/miembros/reservas"
+@inject IUsuarioService _usuarioService
+@inject IReservaService _reservaService
+@inject FirebaseAuthService _firebaseAuthService
+@inject SweetAlertService _sweetAlert
+@inject NavigationManager _navigationManager
+@rendermode InteractiveServer
+
+<PageTitle>Mis Reservas - ParkAR</PageTitle>
+
+@if (!isAuthenticated && !isLoading)
+{
+    <div class="container-fluid py-5">
+        <div class="row justify-content-center">
+            <div class="col-md-6 text-center">
+                <i class="bi bi-shield-lock display-1 text-muted"></i>
+                <h3 class="mt-3">Acceso Restringido</h3>
+                <p class="text-muted">Debes iniciar sesión para ver tus reservas.</p>
+                <button class="btn btn-primary" @onclick='() => _navigationManager.NavigateTo("/login")'>
+                    <i class="bi bi-box-arrow-in-right me-2"></i>Iniciar Sesión
+                </button>
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    <div class="container-fluid py-4">
+        <!-- Breadcrumb -->
+        <BreadcrumbNav Items="breadcrumbItems" />
+
+        @if (isLoading)
+        {
+            <div class="d-flex align-items-center justify-content-center my-4">
+                <div class="spinner-border text-primary" role="status"></div>
+                <span class="ms-2 text-primary">Cargando reservas...</span>
+            </div>
+        }
+        else
+        {
+            <!-- Header con botón de nueva reserva -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h2 class="mb-1">
+                                <i class="bi bi-calendar-check me-2 text-primary"></i>Mis Reservas
+                            </h2>
+                            <p class="text-muted mb-0">Gestiona tus reservas de estacionamiento</p>
+                        </div>
+                        <button class="btn btn-primary" @onclick='() => _navigationManager.NavigateTo("/miembros/reservas/crear")'>
+                            <i class="bi bi-plus-circle me-2"></i>Nueva Reserva
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            @if (reservas != null && reservas.Any())
+            {
+                <!-- Lista de reservas -->
+                <div class="row g-3">
+                    @foreach (var reserva in reservas)
+                    {
+                        <div class="col-lg-6 col-xl-4">
+                            <div class="card h-100 border-0 shadow-sm @GetEstadoCardClass(reserva.EstadoReserva)">
+                                <div class="card-header @GetEstadoHeaderClass(reserva.EstadoReserva) text-white">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <h5 class="mb-0">
+                                            <i class="bi bi-geo-alt me-2"></i>
+                                            Plaza @(reserva.Lugar?.Numero.ToString() ?? "N/A")
+                                        </h5>
+                                        <span class="badge @GetEstadoBadgeClass(reserva.EstadoReserva)">
+                                            @GetEstadoTexto(reserva.EstadoReserva)
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <div class="d-flex align-items-center mb-2">
+                                            <i class="bi bi-calendar3 me-2 text-primary"></i>
+                                            <strong class="me-2">Fecha:</strong>
+                                            <span>@reserva.FechaInicio.ToString("dd/MM/yyyy")</span>
+                                        </div>
+                                        <div class="d-flex align-items-center mb-2">
+                                            <i class="bi bi-clock me-2 text-primary"></i>
+                                            <strong class="me-2">Hora:</strong>
+                                            <span>@reserva.FechaInicio.ToString("HH:mm") - @reserva.FechaFin.ToString("HH:mm")</span>
+                                        </div>
+                                        <div class="d-flex align-items-center mb-2">
+                                            <i class="bi bi-car-front me-2 text-primary"></i>
+                                            <strong class="me-2">Vehículo:</strong>
+                                            <span>@(reserva.Vehiculo?.Patente ?? "N/A")</span>
+                                        </div>
+                                    </div>
+
+                                </div>
+                                <div class="card-footer bg-transparent border-top">
+                                    <div class="d-flex gap-2 flex-wrap">
+                                        @if (reserva.EstadoReserva == Service.Enums.EstadoReservaEnum.Activa && reserva.FechaInicio > DateTime.Now)
+                                        {
+                                            <button class="btn btn-sm btn-warning flex-grow-1" 
+                                                    @onclick="() => Modificar(reserva)">
+                                                <i class="bi bi-pencil me-1"></i>Editar
+                                            </button>
+                                            <button class="btn btn-sm btn-danger flex-grow-1" 
+                                                    @onclick="() => Eliminar(reserva)">
+                                                <i class="bi bi-x-circle me-1"></i>Cancelar
+                                            </button>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <!-- Estado vacío -->
+                <div class="alert alert-info" role="alert">
+                    <div class="text-center py-3">
+                        <i class="bi bi-calendar-x display-4 mb-3 d-block"></i>
+                        <h5>No tienes reservas</h5>
+                        <p class="mb-3">Presiona 'Nueva Reserva' para comenzar</p>
+                        <button class="btn btn-primary" @onclick='() => _navigationManager.NavigateTo("/miembros/reservas/crear")'>
+                            <i class="bi bi-plus-circle me-2"></i>Crear Primera Reserva
+                        </button>
+                    </div>
+                </div>
+            }
+        }
+    </div>
+}
+
+@code {
+    private bool isAuthenticated = false;
+    private bool isLoading = true;
+    private string? errorMessage;
+    private bool showError = false;
+    
+    private Usuario? usuario;
+    private List<Reserva> reservas = new();
+
+    private List<BreadcrumbNav.BreadcrumbItem> breadcrumbItems = new()
+    {
+        new("Dashboard", "/miembros/dashboard", "bi bi-house"),
+        new("Mis Reservas", "#")
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            isLoading = true;
+            isAuthenticated = await _firebaseAuthService.IsUserAuthenticated();
+
+            if (isAuthenticated)
+            {
+                await CargarDatosUsuario();
+                await LoadReservas();
+            }
+
+            isLoading = false;
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error al cargar las reservas: {ex.Message}";
+            showError = true;
+            isAuthenticated = false;
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && showError && !string.IsNullOrEmpty(errorMessage))
+        {
+            await _sweetAlert.FireAsync("Error", errorMessage, SweetAlertIcon.Error);
+            showError = false;
+        }
+    }
+
+    private async Task CargarDatosUsuario()
+    {
+        try
+        {
+            var firebaseUser = _firebaseAuthService.CurrentUser;
+            if (firebaseUser != null)
+            {
+                var usuarios = await _usuarioService.GetAllAsync();
+                usuario = usuarios?.FirstOrDefault(u => u.Email == firebaseUser.Email);
+                
+                if (usuario == null)
+                {
+                    usuario = new Usuario
+                    {
+                        Email = firebaseUser.Email,
+                        Nombre = firebaseUser.DisplayName ?? "Usuario",
+                        Password = "",
+                        TipoUsuario = Service.Enums.TipoUsuarioEnum.Cliente
+                    };
+                    
+                    usuario = await _usuarioService.AddAsync(usuario);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            // Error silencioso
+        }
+    }
+
+    private async Task LoadReservas()
+    {
+        if (usuario == null) return;
+
+        try
+        {
+            isLoading = true;
+            var reservasList = await _reservaService.GetByUsuarioAsync(usuario.Id);
+            
+            reservas = reservasList?
+                .Where(r => !r.IsDeleted)
+                .OrderByDescending(r => r.FechaInicio)
+                .ToList() ?? new List<Reserva>();
+            
+            isLoading = false;
+        }
+        catch (Exception ex)
+        {
+            reservas = new List<Reserva>();
+            isLoading = false;
+        }
+    }
+
+    private void Modificar(Reserva entity)
+    {
+        _navigationManager.NavigateTo($"/miembros/reservas/editar/{entity.Id}");
+    }
+
+    private async Task Eliminar(Reserva entity)
+    {
+        var lugarTexto = $"Plaza {entity.Lugar?.Numero ?? 0}";
+        
+        SweetAlertResult respuesta = await _sweetAlert.FireAsync(new SweetAlertOptions
+        {
+            Title = "Cancelar Reserva",
+            Text = $"¿Está seguro que desea cancelar la reserva en {lugarTexto}?",
+            Icon = SweetAlertIcon.Warning,
+            ShowCancelButton = true,
+            ConfirmButtonText = "Sí, cancelar!",
+            CancelButtonText = "No, espera",
+            ConfirmButtonColor = "#dc3545"
+        });
+
+        if (respuesta.IsConfirmed)
+        {
+            try
+            {
+                isLoading = true;
+                
+                entity.EstadoReserva = Service.Enums.EstadoReservaEnum.Cancelada;
+                await _reservaService.UpdateAsync(entity);
+                
+                await LoadReservas();
+                
+                await _sweetAlert.FireAsync("Cancelada", 
+                    $"La reserva en {lugarTexto} ha sido cancelada exitosamente.", 
+                    SweetAlertIcon.Success);
+            }
+            catch (Exception ex)
+            {
+                await _sweetAlert.FireAsync("Error", "Hubo un error al cancelar la reserva.", SweetAlertIcon.Error);
+            }
+            finally
+            {
+                isLoading = false;
+            }
+        }
+    }
+
+    private string GetEstadoCardClass(EstadoReservaEnum estado)
+    {
+        return estado switch
+        {
+            EstadoReservaEnum.Activa => "border-success",
+            EstadoReservaEnum.Cancelada => "border-danger",
+            EstadoReservaEnum.Finalizada => "border-secondary",
+            _ => ""
+        };
+    }
+
+    private string GetEstadoHeaderClass(EstadoReservaEnum estado)
+    {
+        return estado switch
+        {
+            EstadoReservaEnum.Activa => "bg-success",
+            EstadoReservaEnum.Cancelada => "bg-danger",
+            EstadoReservaEnum.Finalizada => "bg-secondary",
+            _ => "bg-primary"
+        };
+    }
+
+    private string GetEstadoBadgeClass(EstadoReservaEnum estado)
+    {
+        return estado switch
+        {
+            EstadoReservaEnum.Activa => "bg-light text-success",
+            EstadoReservaEnum.Cancelada => "bg-light text-danger",
+            EstadoReservaEnum.Finalizada => "bg-light text-secondary",
+            _ => "bg-light text-primary"
+        };
+    }
+
+    private string GetEstadoTexto(EstadoReservaEnum estado)
+    {
+        return estado switch
+        {
+            EstadoReservaEnum.Activa => "Activa",
+            EstadoReservaEnum.Cancelada => "Cancelada",
+            EstadoReservaEnum.Finalizada => "Finalizada",
+            _ => estado.ToString()
+        };
+    }
+}
+
+<style>
+    .border-success {
+        border-left: 4px solid #28a745 !important;
+    }
+    
+    .border-danger {
+        border-left: 4px solid #dc3545 !important;
+    }
+    
+    .border-secondary {
+        border-left: 4px solid #6c757d !important;
+    }
+</style>

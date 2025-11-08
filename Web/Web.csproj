@@ -18,7 +18,6 @@
 
   <ItemGroup>
     <Folder Include="Components\Pages\Miembros\Historial\" />
-    <Folder Include="Components\Pages\Miembros\Reservas\" />
   </ItemGroup>
 
 </Project>

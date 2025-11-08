@@ -1,11 +1,12 @@
+using Backend.DataContext;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Service.DTOs;
+using Service.Models;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using Backend.DataContext;
-using Service.Models;
-using Microsoft.AspNetCore.Authorization;
 
 namespace Backend.Controllers
 {
@@ -98,10 +99,53 @@ namespace Backend.Controllers
         [HttpPost]
         public async Task<ActionResult<Usuario>> PostUsuario(Usuario usuario)
         {
+            // Validar que el email no esté vacío
+            if (string.IsNullOrWhiteSpace(usuario.Email))
+            {
+                return BadRequest(new { message = "El email es obligatorio." });
+            }
+
+            // Verificar si ya existe un usuario con ese email
+            var usuarioExistente = await _context.Usuarios
+                .AsNoTracking()
+                .FirstOrDefaultAsync(u => u.Email.ToLower() == usuario.Email.ToLower());
+
+            if (usuarioExistente != null)
+            {
+                return Conflict(new { message = $"Ya existe un usuario registrado con el email '{usuario.Email}'." });
+            }
+
             _context.Usuarios.Add(usuario);
-            await _context.SaveChangesAsync();
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateException)
+            {
+                if (UsuarioExists(usuario.Id))
+                {
+                    return Conflict("Ya existe un usuario con el mismo ID");
+                }
+                else
+                {
+                    throw new Exception("Ocurrió un error al crear el usuario");
+                }
+            }
+
             return CreatedAtAction("GetUsuario", new { id = usuario.Id }, usuario);
         }
+
+        //[HttpPost("login")]
+        //public async Task<ActionResult<bool>> LoginInSystem([FromBody] LoginDTO loginDTO)
+        //{
+        //    var usuario = await _context.Usuarios
+        //        .AsNoTracking()
+        //        .FirstOrDefaultAsync(u => u.Email.Equals(loginDTO.Username) &&
+        //                                  u.Password.Equals(loginDTO.Password.GetHashSha256()));
+        //    if (usuario == null)
+        //        return Unauthorized("Credenciales inválidas");
+        //    return true;
+        //}
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteUsuario(int id)

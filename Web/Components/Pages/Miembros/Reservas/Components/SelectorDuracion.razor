@@ -1,0 +1,102 @@
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body">
+        <h5 class="card-title">
+            <i class="bi bi-clock me-2 text-primary"></i>Duración de la Reserva
+        </h5>
+        
+        <!-- Duración actual -->
+        <div class="alert alert-info d-flex align-items-center justify-content-center">
+            <h4 class="mb-0 fw-bold">
+                @((int)Duracion.TotalHours):@Duracion.Minutes.ToString("00") horas
+            </h4>
+        </div>
+
+        <!-- Botones de duración predefinida -->
+        <label class="form-label fw-bold">Selecciona una duración:</label>
+        <div class="row g-2 mb-3">
+            <div class="col-6 col-md-3">
+                <button type="button" class="btn btn-outline-primary w-100" 
+                        @onclick="() => EstablecerDuracion(1)">
+                    1 hora
+                </button>
+            </div>
+            <div class="col-6 col-md-3">
+                <button type="button" class="btn btn-outline-primary w-100" 
+                        @onclick="() => EstablecerDuracion(2)">
+                    2 horas
+                </button>
+            </div>
+            <div class="col-6 col-md-3">
+                <button type="button" class="btn btn-outline-primary w-100" 
+                        @onclick="() => EstablecerDuracion(4)">
+                    4 horas
+                </button>
+            </div>
+            <div class="col-6 col-md-3">
+                <button type="button" class="btn btn-outline-primary w-100" 
+                        @onclick="() => EstablecerDuracion(8)">
+                    8 horas
+                </button>
+            </div>
+        </div>
+
+        <!-- Ajuste fino -->
+        <label class="form-label fw-bold">Ajuste fino:</label>
+        <div class="row g-2">
+            <div class="col-3">
+                <button type="button" class="btn btn-outline-danger w-100 btn-sm" 
+                        @onclick="() => AgregarTiempo(-30)">
+                    -30min
+                </button>
+            </div>
+            <div class="col-3">
+                <button type="button" class="btn btn-outline-danger w-100 btn-sm" 
+                        @onclick="() => AgregarTiempo(-60)">
+                    -1h
+                </button>
+            </div>
+            <div class="col-3">
+                <button type="button" class="btn btn-outline-success w-100 btn-sm" 
+                        @onclick="() => AgregarTiempo(30)">
+                    +30min
+                </button>
+            </div>
+            <div class="col-3">
+                <button type="button" class="btn btn-outline-success w-100 btn-sm" 
+                        @onclick="() => AgregarTiempo(60)">
+                    +1h
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public TimeSpan Duracion { get; set; }
+
+    [Parameter]
+    public EventCallback<TimeSpan> DuracionChanged { get; set; }
+
+    [Parameter]
+    public EventCallback OnCambio { get; set; }
+
+    private async Task EstablecerDuracion(int horas)
+    {
+        Duracion = TimeSpan.FromHours(horas);
+        await DuracionChanged.InvokeAsync(Duracion);
+        await OnCambio.InvokeAsync();
+    }
+
+    private async Task AgregarTiempo(int minutos)
+    {
+        var nuevaDuracion = Duracion.Add(TimeSpan.FromMinutes(minutos));
+        
+        if (nuevaDuracion.TotalMinutes >= 30 && nuevaDuracion.TotalHours <= 12)
+        {
+            Duracion = nuevaDuracion;
+            await DuracionChanged.InvokeAsync(Duracion);
+            await OnCambio.InvokeAsync();
+        }
+    }
+}

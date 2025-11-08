@@ -1,0 +1,50 @@
+@if (MostrarResumen)
+{
+    <div class="card border-success border-2 shadow-sm mb-4">
+        <div class="card-header bg-success bg-opacity-10">
+            <h5 class="card-title mb-0 text-success">
+                <i class="bi bi-clipboard-check me-2"></i>Resumen de la Reserva
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <strong><i class="bi bi-car-front me-2"></i>Vehículo:</strong><br/>
+                    <span class="text-muted">@VehiculoPatente</span>
+                </div>
+                <div class="col-md-6">
+                    <strong><i class="bi bi-geo-alt me-2"></i>Plaza:</strong><br/>
+                    <span class="text-muted">Plaza @PlazaNumero</span>
+                </div>
+                <div class="col-md-6">
+                    <strong><i class="bi bi-calendar-event me-2"></i>Inicio:</strong><br/>
+                    <span class="text-muted">@FechaInicio.ToString("dd/MM/yyyy") a las @HoraInicio</span>
+                </div>
+                <div class="col-md-6">
+                    <strong><i class="bi bi-clock me-2"></i>Duración:</strong><br/>
+                    <span class="text-muted">@((int)Duracion.TotalHours)h @Duracion.Minutes.ToString("00")m</span>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public bool MostrarResumen { get; set; }
+
+    [Parameter]
+    public string VehiculoPatente { get; set; } = string.Empty;
+
+    [Parameter]
+    public int PlazaNumero { get; set; }
+
+    [Parameter]
+    public DateTime FechaInicio { get; set; }
+
+    [Parameter]
+    public string HoraInicio { get; set; } = string.Empty;
+
+    [Parameter]
+    public TimeSpan Duracion { get; set; }
+}

@@ -59,10 +59,15 @@ namespace Backend.Controllers
         {
             if (idusuario == 0)
             {
-                return BadRequest("Ël parametro idusuario es obligatorio.");
+                return BadRequest("El parametro idusuario es obligatorio.");
             }
 
-            var reservas = await _context.Reservas.Include(p => p.Lugar).AsNoTracking().Where(p => p.UsuarioId.Equals(idusuario)).ToListAsync();
+            var reservas = await _context.Reservas
+                .Include(p => p.Lugar)
+                .Include(p => p.Vehiculo)
+                .AsNoTracking()
+                .Where(p => p.UsuarioId.Equals(idusuario))
+                .ToListAsync();
 
             return reservas;
         }

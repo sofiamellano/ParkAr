@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Caching.Memory;
+using Service.DTOs;
 using Service.Interfaces;
 using Service.Models;
 using Service.Utils;
@@ -28,5 +29,22 @@ namespace Service.Services
             }
             return JsonSerializer.Deserialize<Usuario>(content, _options);
         }
+
+        //public async Task<bool> LoginInSystem(string email, string password)
+        //{
+        //    var loginDTO = new LoginDTO
+        //    {
+        //        Username = email,
+        //        Password = password
+        //    };
+        //    var response = await _httpClient.PostAsJsonAsync($"{_endpoint}/login", loginDTO);
+        //    var content = await response.Content.ReadAsStringAsync();
+        //    if (!response.IsSuccessStatusCode)
+        //    {
+        //        throw new Exception($"Error al iniciar sesión: {response.StatusCode}");
+        //    }
+        //    var result = JsonSerializer.Deserialize<bool>(content, _options);
+        //    return result;
+        //}
     }
 }

@@ -1,0 +1,58 @@
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body">
+        <h5 class="card-title">
+            <i class="bi bi-calendar3 me-2 text-primary"></i>Fecha y Hora de Inicio
+        </h5>
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label class="form-label fw-bold">Fecha</label>
+                <input type="date" 
+                       class="form-control" 
+                       @bind="FechaInicio" 
+                       min="@DateTime.Today.ToString("yyyy-MM-dd")"
+                       @bind:after="NotificarCambio" />
+            </div>
+            <div class="col-md-6">
+                <label class="form-label fw-bold">Hora</label>
+                <input type="time" 
+                       class="form-control" 
+                       @bind="horaInicio"
+                       @bind:after="NotificarCambio" />
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public DateTime FechaInicio { get; set; }
+
+    [Parameter]
+    public EventCallback<DateTime> FechaInicioChanged { get; set; }
+
+    [Parameter]
+    public string HoraInicio { get; set; } = "09:00";
+
+    [Parameter]
+    public EventCallback<string> HoraInicioChanged { get; set; }
+
+    [Parameter]
+    public EventCallback OnCambio { get; set; }
+
+    // Variable local para manejar el binding del input type="time"
+    private TimeOnly horaInicio
+    {
+        get => TimeOnly.Parse(HoraInicio);
+        set
+        {
+            HoraInicio = value.ToString("HH:mm");
+            _ = HoraInicioChanged.InvokeAsync(HoraInicio);
+        }
+    }
+
+    private async Task NotificarCambio()
+    {
+        await FechaInicioChanged.InvokeAsync(FechaInicio);
+        await OnCambio.InvokeAsync();
+    }
+}

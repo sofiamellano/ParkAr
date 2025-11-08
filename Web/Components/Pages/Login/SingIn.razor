@@ -1,6 +1,7 @@
 ﻿@page "/signin"
 @inject SweetAlertService sweetAlert
 @inject FirebaseAuthService firebaseAuthService
+@inject IUsuarioService _usuarioService
 @inject NavigationManager navigationManager
 @rendermode InteractiveServer
 
@@ -17,65 +18,82 @@
         </div>
 
         <div class="card-body p-4 p-md-5">
-            <div class="mb-3">
-                <label class="form-label fw-semibold" for="Nombre">Nombre</label>
-                <div class="input-group input-group-lg">
-                    <span class="input-group-text bg-light-subtle">
-                        <i class="bi bi-person"></i>
-                    </span>
-                    <InputText id="Nombre" class="form-control" @bind-Value="name" placeholder="Nombre y apellido" />
+            <EditForm Model="usuario">
+                <div class="mb-3">
+                    <label class="form-label fw-semibold" for="Nombre">Nombre <span class="text-danger">*</span></label>
+                    <div class="input-group input-group-lg">
+                        <span class="input-group-text bg-light-subtle">
+                            <i class="bi bi-person"></i>
+                        </span>
+                        <InputText id="Nombre" class="form-control" @bind-Value="usuario.Nombre" placeholder="Nombre y apellido" />
+                    </div>
                 </div>
-            </div>
 
-            <div class="mb-3">
-                <label class="form-label fw-semibold" for="email">Email</label>
-                <div class="input-group input-group-lg">
-                    <span class="input-group-text bg-light-subtle">
-                        <i class="bi bi-envelope"></i>
-                    </span>
-                    <InputText id="email" class="form-control" @bind-Value="email" placeholder="usuario@gmail.com" type="email" autocomplete="email" />
+                <div class="mb-3">
+                    <label class="form-label fw-semibold" for="email">Email <span class="text-danger">*</span></label>
+                    <div class="input-group input-group-lg">
+                        <span class="input-group-text bg-light-subtle">
+                            <i class="bi bi-envelope"></i>
+                        </span>
+                        <InputText id="email" class="form-control" @bind-Value="usuario.Email" placeholder="usuario@gmail.com" type="email" autocomplete="email" />
+                    </div>
                 </div>
-            </div>
 
-            <div class="mb-3">
-                <label class="form-label fw-semibold" for="password">Contraseña</label>
-                <div class="input-group input-group-lg">
-                    <span class="input-group-text bg-light-subtle">
-                        <i class="bi bi-lock"></i>
-                    </span>
-                    <InputText id="password" class="form-control" @bind-Value="password" placeholder="••••••••" type="@(_showPassword ? "text" : "password")" autocomplete="new-password" />
-                    <button type="button" class="btn btn-outline-secondary" @onclick="() => _showPassword = !_showPassword">
-                        <i class="bi @( _showPassword ? "bi-eye-slash" : "bi-eye")"></i>
-                    </button>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold" for="tipoUsuario">Tipo de Usuario <span class="text-danger">*</span></label>
+                    <div class="input-group input-group-lg">
+                        <span class="input-group-text bg-light-subtle">
+                            <i class="bi bi-person-badge"></i>
+                        </span>
+                        <InputSelect id="tipoUsuario" class="form-select" @bind-Value="usuario.TipoUsuario">
+                            @foreach (var value in Enum.GetValues<TipoUsuarioEnum>())
+                            {
+                                <option value="@value">@value</option>
+                            }
+                        </InputSelect>
+                    </div>
                 </div>
-            </div>
 
-            <div class="mb-4">
-                <label class="form-label fw-semibold" for="passwordverify">Verificar contraseña</label>
-                <div class="input-group input-group-lg">
-                    <span class="input-group-text bg-light-subtle">
-                        <i class="bi bi-shield-lock"></i>
-                    </span>
-                    <InputText id="passwordverify" class="form-control" @bind-Value="passwordverify" placeholder="Repite tu contraseña" type="@(_showPasswordVerify ? "text" : "password")" autocomplete="new-password" />
-                    <button type="button" class="btn btn-outline-secondary" @onclick="() => _showPasswordVerify = !_showPasswordVerify">
-                        <i class="bi @( _showPasswordVerify ? "bi-eye-slash" : "bi-eye")"></i>
-                    </button>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold" for="password">Contraseña <span class="text-danger">*</span></label>
+                    <div class="input-group input-group-lg">
+                        <span class="input-group-text bg-light-subtle">
+                            <i class="bi bi-lock"></i>
+                        </span>
+                        <InputText id="password" class="form-control" @bind-Value="usuario.Password" placeholder="••••••••" type="@(_showPassword ? "text" : "password")" autocomplete="new-password" />
+                        <button type="button" class="btn btn-outline-secondary" @onclick="() => _showPassword = !_showPassword">
+                            <i class="bi @( _showPassword ? "bi-eye-slash" : "bi-eye")"></i>
+                        </button>
+                    </div>
                 </div>
-            </div>
 
-            <button type="button" class="btn btn-gradient w-100 mb-2" @onclick="Register" disabled="@_isSubmitting">
-                @if (_isSubmitting)
-                {
-                    <span class="spinner-border spinner-border-sm me-2" role="status"></span>
-                }
-                <i class="bi bi-person-check me-1"></i> Enviar
-            </button>
+                <div class="mb-4">
+                    <label class="form-label fw-semibold" for="passwordverify">Verificar contraseña <span class="text-danger">*</span></label>
+                    <div class="input-group input-group-lg">
+                        <span class="input-group-text bg-light-subtle">
+                            <i class="bi bi-shield-lock"></i>
+                        </span>
+                        <InputText id="passwordverify" class="form-control" @bind-Value="passwordverify" placeholder="Repite tu contraseña" type="@(_showPasswordVerify ? "text" : "password")" autocomplete="new-password" />
+                        <button type="button" class="btn btn-outline-secondary" @onclick="() => _showPasswordVerify = !_showPasswordVerify">
+                            <i class="bi @( _showPasswordVerify ? "bi-eye-slash" : "bi-eye")"></i>
+                        </button>
+                    </div>
+                </div>
 
-            <div class="text-center mt-2">
-                <small class="text-muted">¿Ya tienes cuenta?
-                    <a class="text-decoration-none" href="/login">Inicia sesión</a>
-                </small>
-            </div>
+                <button type="button" class="btn btn-gradient w-100 mb-2" @onclick="Register" disabled="@_isSubmitting">
+                    @if (_isSubmitting)
+                    {
+                        <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                    }
+                    <i class="bi bi-person-check me-1"></i> Enviar
+                </button>
+
+                <div class="text-center mt-2">
+                    <small class="text-muted">¿Ya tienes cuenta?
+                        <a class="text-decoration-none" href="/login">Inicia sesión</a>
+                    </small>
+                </div>
+            </EditForm>
         </div>
 
         <div class="card-footer text-body-secondary text-center small">
@@ -85,50 +103,81 @@
 </div>
 
 @code {
-    string name = string.Empty;
-    string email = string.Empty;
-    string password = string.Empty;
+    Usuario usuario = new() { TipoUsuario = TipoUsuarioEnum.Cliente };
     string passwordverify = string.Empty;
 
     bool _showPassword = false;
     bool _showPasswordVerify = false;
     bool _isSubmitting = false;
 
-    private async Task Register()
+    private async Task<bool> DataControl()
     {
-        if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(email) ||
-            string.IsNullOrWhiteSpace(password) || string.IsNullOrWhiteSpace(passwordverify))
+        if (string.IsNullOrWhiteSpace(usuario.Nombre) ||
+            string.IsNullOrWhiteSpace(usuario.Email) ||
+            string.IsNullOrWhiteSpace(usuario.Password) ||
+            string.IsNullOrWhiteSpace(passwordverify))
         {
-            await sweetAlert.FireAsync("Error", "Por favor, complete todos los campos.", SweetAlertIcon.Error);
-            return;
+            await sweetAlert.FireAsync("Error", "Por favor, completa todos los campos obligatorios.", SweetAlertIcon.Error);
+            return false;
         }
-        if (password != passwordverify)
+        if (usuario.Password != passwordverify)
         {
             await sweetAlert.FireAsync("Error", "Las contraseñas no coinciden.", SweetAlertIcon.Error);
-            return;
+            return false;
         }
+        if (usuario.Password.Length < 6)
+        {
+            await sweetAlert.FireAsync("Error", "La contraseña debe tener al menos 6 caracteres.", SweetAlertIcon.Error);
+            return false;
+        }
+        return true;
+    }
 
+    private async Task Register()
+    {
+        if (!await DataControl()) return;
+        
         _isSubmitting = true;
+        StateHasChanged();
+
         try
         {
-            var result = await firebaseAuthService.createUserWithEmailAndPassword(email, password, name);
-            if (result != null)
+            // 1) Crear en Firebase
+            var loginResponse = await firebaseAuthService.createUserWithEmailAndPassword(usuario.Email, usuario.Password, usuario.Nombre);
+            if (string.IsNullOrEmpty(loginResponse?.UserUid))
             {
-                await sweetAlert.FireAsync("Éxito", "Usuario registrado correctamente. Revisa tu correo para verificar la cuenta.", SweetAlertIcon.Success);
-                name = string.Empty;
-                email = string.Empty;
-                password = string.Empty;
-                passwordverify = string.Empty;
-                navigationManager.NavigateTo("/login");
+                await sweetAlert.FireAsync("Error", loginResponse?.Error ?? "No se pudo crear el usuario en Firebase.", SweetAlertIcon.Error);
+                return;
             }
-            else
+
+            // 2) Persistir en backend (MySQL)
+            usuario.Password = usuario.Password.GetHashSha256();
+            var usuarioNuevo = await _usuarioService.AddAsync(usuario);
+            if (usuarioNuevo is null)
             {
-                await sweetAlert.FireAsync("Error", "Error al registrar el usuario", SweetAlertIcon.Error);
+                await sweetAlert.FireAsync("Error", "No se pudo registrar el usuario en el sistema.", SweetAlertIcon.Error);
+                return;
             }
+
+            await sweetAlert.FireAsync("Éxito", "Usuario registrado correctamente. Revisa tu correo para verificar la cuenta.", SweetAlertIcon.Success);
+
+            // 3) Cerrar sesión para exigir verificación y redirigir a login
+            await firebaseAuthService.SignOut();
+
+            // Limpiar
+            usuario = new Usuario { TipoUsuario = TipoUsuarioEnum.Cliente };
+            passwordverify = string.Empty;
+
+            navigationManager.NavigateTo("/login");
+        }
+        catch (Exception ex)
+        {
+            await sweetAlert.FireAsync("Error", ex.Message, SweetAlertIcon.Error);
         }
         finally
         {
             _isSubmitting = false;
+            StateHasChanged();
         }
     }
 }

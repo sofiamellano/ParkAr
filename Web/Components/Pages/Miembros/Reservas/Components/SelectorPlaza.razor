@@ -1,0 +1,62 @@
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="card-title mb-0">
+                <i class="bi bi-geo-alt me-2 text-primary"></i>Seleccionar Plaza Disponible
+            </h5>
+            <span class="badge bg-success">
+                @LugaresDisponibles.Count plazas disponibles
+            </span>
+        </div>
+        @if (LugaresDisponibles.Any())
+        {
+            <select class="form-select" value="@LugarSeleccionadoId" @onchange="OnPlazaChanged">
+                <option value="0">Seleccione una plaza disponible</option>
+                @foreach (var lugar in LugaresDisponibles)
+                {
+                    <option value="@lugar.Id">Plaza @lugar.Numero</option>
+                }
+            </select>
+        }
+        else
+        {
+            <div class="alert alert-warning">
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                No hay plazas disponibles para la fecha y hora seleccionada
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public List<Lugar> LugaresDisponibles { get; set; } = new();
+
+    [Parameter]
+    public int LugarSeleccionadoId { get; set; }
+
+    [Parameter]
+    public EventCallback<int> LugarSeleccionadoIdChanged { get; set; }
+
+    private async Task OnPlazaChanged(ChangeEventArgs e)
+    {
+        try
+        {
+            if (e.Value is not null && int.TryParse(e.Value.ToString(), out int nuevoId))
+            {
+                LugarSeleccionadoId = nuevoId;
+                
+                // Invocar el callback para notificar al padre
+                if (LugarSeleccionadoIdChanged.HasDelegate)
+                {
+                    await LugarSeleccionadoIdChanged.InvokeAsync(nuevoId);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            // Log del error
+            Console.WriteLine($"Error al cambiar plaza: {ex.Message}");
+        }
+    }
+}
