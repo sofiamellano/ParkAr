@@ -1,4 +1,4 @@
-using Backend.Class;
+﻿using Backend.Class;
 using Backend.DataContext;
 using FirebaseAdmin;
 using Google.Apis.Auth.OAuth2;
@@ -34,17 +34,28 @@ builder.Services.AddAuthorization();
 
 builder.Services.AddControllers();
 
-var configuration = new ConfigurationBuilder()
-        .AddJsonFile("appsettings.json")
-        .Build();
+// Configuración (lee de appsettings.json si existe y de variables de entorno si no)
+builder.Configuration
+    .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
+    .AddEnvironmentVariables();
+
+var configuration = builder.Configuration;
+
+// Obtener la cadena de conexión
 var cadenaConexion = configuration.GetConnectionString("mysqlRemoto");
 
-// configuraci�n de inyecci�n de dependencias del DBContext
+// Validar que esté definida
+if (string.IsNullOrWhiteSpace(cadenaConexion))
+{
+    throw new Exception("❌ No se encontró la cadena de conexión 'mysqlRemoto'. Verificá las variables en Azure.");
+}
+
+// configuración de inyección de dependencias del DBContext
 builder.Services.AddDbContext<ParkARContext>(
     options => options.UseMySql(cadenaConexion,
                                 ServerVersion.AutoDetect(cadenaConexion)));
 
-// Configura el serializador JSON para manejar referencias c�clicas
+// Configura el serializador JSON para manejar referencias cíclicas
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
@@ -85,7 +96,7 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-// Configurar una pol�tica de CORS
+// Configurar una política de CORS
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowSpecificOrigins",
