@@ -61,7 +61,7 @@ namespace Service.Properties {
         }
         
         /// <summary>
-        ///   Busca una cadena traducida similar a https://localhost:7070/api/.
+        ///   Busca una cadena traducida similar a https://dataparkar.azurewebsites.net/api/.
         /// </summary>
         public static string UrlApi {
             get {

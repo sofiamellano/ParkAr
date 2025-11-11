@@ -90,7 +90,7 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowSpecificOrigins",
         builder => builder
-            .WithOrigins("https://parkar.azurewebsites.net",
+            .WithOrigins("https://dataparkar.azurewebsites.net",
                     "https://www.parkar.azurewebsites.net",
                     "https://localhost:8000")
             .AllowAnyHeader()
