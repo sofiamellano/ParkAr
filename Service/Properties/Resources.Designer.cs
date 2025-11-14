@@ -61,11 +61,20 @@ namespace Service.Properties {
         }
         
         /// <summary>
-        ///   Busca una cadena traducida similar a https://dataparkar.azurewebsites.net/api/.
+        ///   Busca una cadena traducida similar a https://localhost:7070/api/.
         /// </summary>
         public static string UrlApi {
             get {
                 return ResourceManager.GetString("UrlApi", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Busca una cadena traducida similar a https://dataparkar.azurewebsites.net/api/.
+        /// </summary>
+        public static string UrlApi3 {
+            get {
+                return ResourceManager.GetString("UrlApi3", resourceCulture);
             }
         }
     }

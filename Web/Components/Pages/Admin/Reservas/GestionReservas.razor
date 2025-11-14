@@ -1,0 +1,311 @@
+@page "/admin/reservas"
+@inject IReservaService _reservaService
+@inject IUsuarioService _usuarioService
+@inject ILugarService _lugarService
+@inject IVehiculoService _vehiculoService
+@inject FirebaseAuthService _firebaseAuthService
+@inject SweetAlertService _sweetAlert
+@inject NavigationManager _navigationManager
+@rendermode InteractiveServer
+
+<PageTitle>Gestión de Reservas - Admin ParkAR</PageTitle>
+
+@if (!isAuthenticated && !isLoading)
+{
+    <MensajeAccesoRestringido />
+}
+else if (isLoading)
+{
+    <SpinnerCarga Mensaje="Cargando reservas..." />
+}
+else if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="container-fluid py-5">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="alert alert-danger" role="alert">
+                    <h4 class="alert-heading">
+                        <i class="bi bi-exclamation-triangle me-2"></i>Error al cargar reservas
+                    </h4>
+                    <p>@errorMessage</p>
+                    <hr>
+                    <button class="btn btn-outline-danger" @onclick="RetryCargarDatos">
+                        <i class="bi bi-arrow-clockwise me-2"></i>Reintentar
+                    </button>
+                    <button class="btn btn-outline-secondary ms-2" @onclick='() => _navigationManager.NavigateTo("/admin/dashboard")'>
+                        <i class="bi bi-house me-2"></i>Volver al Dashboard
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    <div class="container-fluid py-4">
+        <BreadcrumbAdmin Pagina="Gestión de Reservas" />
+
+        <HeaderSeccion Titulo="Gestión de Reservas"
+                       Descripcion="Administra las reservas de estacionamiento"
+                       Badge="@($"{reservasTotales.Count} reservas")" />
+
+        <FiltrosReservas @bind-SearchText="searchText"
+                         @bind-MostrarEliminadas="mostrarEliminadas"
+                         @bind-FiltroEstado="filtroEstado"
+                         OnAplicarFiltros="EventCallback.Factory.Create(this, AplicarFiltros)" />
+
+        @if (mostrarEliminadas && reservasFiltradas.Any(r => r.IsDeleted))
+        {
+            <div class="alert alert-info mb-3">
+                <i class="bi bi-info-circle me-2"></i>
+                Mostrando <strong>@reservasFiltradas.Count(r => r.IsDeleted)</strong> reserva(s) eliminada(s)
+            </div>
+        }
+
+        <TablaReservas Reservas="reservasFiltradas"
+                       OnVerDetalle="VerDetalleReserva"
+                       OnCancelar="CancelarReserva"
+                       OnEliminar="EliminarReserva"
+                       OnRestaurar="RestaurarReserva" />
+    </div>
+}
+
+@code {
+    private bool isAuthenticated = false;
+    private bool isLoading = true;
+    private Usuario? usuarioAdmin;
+    private string errorMessage = "";
+
+    private List<Reserva> reservasTotales = new();
+    private List<Reserva> reservasFiltradas = new();
+
+    private string searchText = "";
+    private bool mostrarEliminadas = false;
+    private string filtroEstado = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await InicializarPagina();
+    }
+
+    private async Task InicializarPagina()
+    {
+        try
+        {
+            errorMessage = "";
+            isAuthenticated = await VerificarAutenticacionAdmin();
+
+            if (isAuthenticated)
+            {
+                await CargarDatos();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error al cargar reservas: {ex.Message}");
+            errorMessage = ex.Message;
+            isAuthenticated = false;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task RetryCargarDatos()
+    {
+        isLoading = true;
+        errorMessage = "";
+        StateHasChanged();
+        await InicializarPagina();
+    }
+
+    private async Task<bool> VerificarAutenticacionAdmin()
+    {
+        var isAuth = await _firebaseAuthService.IsUserAuthenticated();
+        if (!isAuth) return false;
+
+        var firebaseUser = _firebaseAuthService.CurrentUser;
+        if (firebaseUser == null) return false;
+
+        var usuariosTemp = await _usuarioService.GetAllAsync();
+        usuarioAdmin = usuariosTemp?.FirstOrDefault(u => u.Email == firebaseUser.Email);
+
+        return usuarioAdmin?.TipoUsuario == Service.Enums.TipoUsuarioEnum.Admin;
+    }
+
+    private async Task CargarDatos()
+    {
+        var reservasActivas = await _reservaService.GetAllAsync() ?? new List<Reserva>();
+        var reservasEliminadas = await _reservaService.GetAllDeletedsAsync() ?? new List<Reserva>();
+        
+        reservasTotales = reservasActivas
+            .Concat(reservasEliminadas)
+            .OrderByDescending(r => r.FechaInicio)
+            .ToList();
+
+        await AplicarFiltros();
+    }
+
+    private async Task AplicarFiltros()
+    {
+        reservasFiltradas = reservasTotales.Where(r =>
+        {
+            bool cumpleEliminado = mostrarEliminadas ? r.IsDeleted : !r.IsDeleted;
+
+            bool cumpleBusqueda = string.IsNullOrWhiteSpace(searchText) ||
+                 r.Usuario?.Nombre.Contains(searchText, StringComparison.OrdinalIgnoreCase) == true ||
+                 r.Vehiculo?.Patente.Contains(searchText, StringComparison.OrdinalIgnoreCase) == true ||
+                 r.Lugar?.Numero.ToString().Contains(searchText) == true;
+
+            bool cumpleEstado = true;
+            if (!string.IsNullOrWhiteSpace(filtroEstado))
+            {
+                cumpleEstado = r.EstadoReserva.ToString().Equals(filtroEstado, StringComparison.OrdinalIgnoreCase);
+            }
+
+            return cumpleEliminado && cumpleBusqueda && cumpleEstado;
+        }).ToList();
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task VerDetalleReserva(Reserva reserva)
+    {
+        var estadoClass = reserva.EstadoReserva switch
+        {
+            Service.Enums.EstadoReservaEnum.Activa => "bg-success",
+            Service.Enums.EstadoReservaEnum.Cancelada => "bg-danger",
+            Service.Enums.EstadoReservaEnum.Finalizada => "bg-secondary",
+            _ => "bg-primary"
+        };
+
+        var duracion = reserva.FechaFin - reserva.FechaInicio;
+
+        string usuarioNombre = reserva.Usuario?.Nombre ?? "N/A";
+        string usuarioEmail = reserva.Usuario?.Email ?? "N/A";
+        string vehiculo = reserva.Vehiculo?.Patente ?? "N/A";
+        string plaza = reserva.Lugar?.Numero.ToString() ?? "N/A";
+        string estado = reserva.EstadoReserva.ToString();
+        string fechaInicio = reserva.FechaInicio.ToString("dd/MM/yyyy HH:mm");
+        string fechaFin = reserva.FechaFin.ToString("dd/MM/yyyy HH:mm");
+        string duracionTexto = $"{duracion.TotalHours:F1} horas";
+
+        await _sweetAlert.FireAsync(new SweetAlertOptions
+        {
+            Title = $"Reserva #{reserva.Id}",
+            Html = $@"
+            <div class='text-start'>
+                <p><strong>Usuario:</strong> {usuarioNombre}</p>
+                <p><strong>Email:</strong> {usuarioEmail}</p>
+                <p><strong>Vehículo:</strong> {vehiculo}</p>
+                <p><strong>Plaza:</strong> {plaza}</p>
+                <hr>
+                <p><strong>Estado:</strong>
+                    <span class='badge {estadoClass}'>{estado}</span>
+                </p>
+                <p><strong>Fecha Inicio:</strong> {fechaInicio}</p>
+                <p><strong>Fecha Fin:</strong> {fechaFin}</p>
+                <p><strong>Duración:</strong> {duracionTexto}</p>
+            </div>
+        ",
+            Icon = SweetAlertIcon.Info
+        });
+    }
+
+    private async Task CancelarReserva(Reserva reserva)
+    {
+        if (reserva.EstadoReserva != Service.Enums.EstadoReservaEnum.Activa)
+        {
+            await _sweetAlert.FireAsync("No se puede cancelar", "Solo se pueden cancelar reservas activas", SweetAlertIcon.Warning);
+            return;
+        }
+
+        var resultado = await _sweetAlert.FireAsync(new SweetAlertOptions
+        {
+            Title = "Cancelar Reserva",
+            Text = $"¿Deseas cancelar la reserva #{reserva.Id} del usuario {reserva.Usuario?.Nombre}?",
+            Icon = SweetAlertIcon.Warning,
+            ShowCancelButton = true,
+            ConfirmButtonText = "Sí, Cancelar",
+            CancelButtonText = "No",
+            ConfirmButtonColor = "#dc3545"
+        });
+
+        if (resultado.IsConfirmed)
+        {
+            try
+            {
+                reserva.EstadoReserva = Service.Enums.EstadoReservaEnum.Cancelada;
+                await _reservaService.UpdateAsync(reserva);
+                await _sweetAlert.FireAsync("Cancelada", $"Reserva #{reserva.Id} cancelada correctamente", SweetAlertIcon.Success);
+                await CargarDatos();
+            }
+            catch (Exception ex)
+            {
+                await _sweetAlert.FireAsync("Error", $"No se pudo cancelar: {ex.Message}", SweetAlertIcon.Error);
+            }
+        }
+    }
+
+    private async Task EliminarReserva(Reserva reserva)
+    {
+        var resultado = await _sweetAlert.FireAsync(new SweetAlertOptions
+        {
+            Title = "Eliminar Reserva",
+            Html = $@"
+                <p>¿Deseas eliminar permanentemente la reserva <strong>#{reserva.Id}</strong>?</p>
+                <div class='alert alert-danger mt-3 text-start'>
+                    <i class='bi bi-exclamation-triangle me-2'></i>
+                    <strong>Advertencia:</strong> Esta acción marcará la reserva como eliminada.
+                </div>
+            ",
+            Icon = SweetAlertIcon.Warning,
+            ShowCancelButton = true,
+            ConfirmButtonText = "Sí, Eliminar",
+            CancelButtonText = "Cancelar",
+            ConfirmButtonColor = "#dc3545"
+        });
+
+        if (resultado.IsConfirmed)
+        {
+            try
+            {
+                await _reservaService.DeleteAsync(reserva.Id);
+                await _sweetAlert.FireAsync("Eliminada", $"Reserva #{reserva.Id} eliminada correctamente", SweetAlertIcon.Success);
+                await CargarDatos();
+            }
+            catch (Exception ex)
+            {
+                await _sweetAlert.FireAsync("Error", $"No se pudo eliminar: {ex.Message}", SweetAlertIcon.Error);
+            }
+        }
+    }
+
+    private async Task RestaurarReserva(Reserva reserva)
+    {
+        var resultado = await _sweetAlert.FireAsync(new SweetAlertOptions
+        {
+            Title = "Restaurar Reserva",
+            Text = $"¿Deseas restaurar la reserva #{reserva.Id}?",
+            Icon = SweetAlertIcon.Question,
+            ShowCancelButton = true,
+            ConfirmButtonText = "Sí, Restaurar",
+            CancelButtonText = "No"
+        });
+
+        if (resultado.IsConfirmed)
+        {
+            try
+            {
+                await _reservaService.RestoreAsync(reserva.Id);
+                await _sweetAlert.FireAsync("Restaurada", $"Reserva #{reserva.Id} restaurada correctamente", SweetAlertIcon.Success);
+                await CargarDatos();
+            }
+            catch (Exception ex)
+            {
+                await _sweetAlert.FireAsync("Error", $"No se pudo restaurar: {ex.Message}", SweetAlertIcon.Error);
+            }
+        }
+    }
+}

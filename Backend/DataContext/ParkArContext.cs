@@ -36,13 +36,6 @@ namespace Backend.DataContext
         {
             #region Datos Semilla
             // =============================
-            // CONFIGURACIONES
-            // =============================
-            modelBuilder.Entity<Configuracion>().HasData(
-                new Configuracion{Id = 1, NombreEmpresa = "ParkAR", Direccion = "Av. Siempre Viva 123", Telefono = "341-555-1234", Email = "contacto@parkar.com", Cuit = "30-12345678-9", HorarioApertura = new TimeSpan(8, 0, 0), HorarioCierre = new TimeSpan(22, 0, 0), PrecioHora = 150.00m, IsDeleted = false}
-            );
-
-            // =============================
             // USUARIOS
             // =============================
             modelBuilder.Entity<Usuario>().HasData(

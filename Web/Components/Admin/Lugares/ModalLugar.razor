@@ -1,0 +1,91 @@
+@code {
+    [Parameter] public Lugar Lugar { get; set; } = new();
+    [Parameter] public List<Lugar> TodosLosLugares { get; set; } = new();
+    [Parameter] public EventCallback<Lugar> OnGuardar { get; set; }
+
+    private bool mostrarModal = false;
+    private bool esModoEdicion => Lugar.Id > 0;
+
+    public void Abrir()
+    {
+        mostrarModal = true;
+        StateHasChanged();
+    }
+
+    public void Cerrar()
+    {
+        mostrarModal = false;
+        StateHasChanged();
+    }
+
+    private async Task Guardar()
+    {
+        if (Lugar.Numero <= 0)
+        {
+            // Validación básica
+            return;
+        }
+
+        await OnGuardar.InvokeAsync(Lugar);
+    }
+}
+
+@if (mostrarModal)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">
+                        <i class="bi bi-p-square me-2"></i>
+                        @(esModoEdicion ? $"Editar Plaza {Lugar.Numero}" : "Nueva Plaza")
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">
+                            <i class="bi bi-hash me-1"></i>Número de Plaza
+                        </label>
+                        <input type="number" 
+                               class="form-control form-control-lg" 
+                               @bind="Lugar.Numero" 
+                               min="1" 
+                               placeholder="Ej: 101"
+                               required />
+                        <div class="form-text">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Ingrese el número identificador de la plaza
+                        </div>
+                    </div>
+
+                    @if (esModoEdicion)
+                    {
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle me-2"></i>
+                            <strong>Nota:</strong> Se modificará la información de la Plaza @Lugar.Numero
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="Cerrar">
+                        <i class="bi bi-x-circle me-2"></i>Cancelar
+                    </button>
+                    <button type="button" class="btn btn-primary" @onclick="Guardar">
+                        <i class="bi bi-save me-2"></i>@(esModoEdicion ? "Guardar Cambios" : "Crear Plaza")
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<style>
+    .modal.show {
+        display: block !important;
+    }
+
+    .btn-close-white {
+        filter: brightness(0) invert(1);
+    }
+</style>

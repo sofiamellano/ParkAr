@@ -1,0 +1,120 @@
+@* ============================
+   COMPONENTE: FiltroReservas
+   ============================ *@
+
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <div class="row g-3 align-items-center">
+                    <!-- Campo de búsqueda -->
+                    <div class="col-md-5">
+                        <div class="input-group">
+                            <span class="input-group-text bg-light">
+                                <i class="bi bi-search"></i>
+                            </span>
+
+                            <input type="text"
+                                   class="form-control"
+                                   placeholder="Buscar por usuario, vehículo o plaza..."
+                                   value="@SearchText"
+                                   @oninput="OnSearchInput" />
+
+                            @if (!string.IsNullOrWhiteSpace(SearchText))
+                            {
+                                <button class="btn btn-outline-secondary"
+                                        title="Limpiar búsqueda"
+                                        type="button"
+                                        @onclick="LimpiarBusqueda">
+                                    <i class="bi bi-x-lg"></i>
+                                </button>
+                            }
+                        </div>
+                    </div>
+
+                    <!-- Filtro por estado -->
+                    <div class="col-md-3">
+                        <select class="form-select" 
+                                value="@FiltroEstado" 
+                                @onchange="OnFiltroEstadoChange">
+                            <option value="">Todos los estados</option>
+                            <option value="Activa">Activas</option>
+                            <option value="Cancelada">Canceladas</option>
+                            <option value="Finalizada">Finalizadas</option>
+                        </select>
+                    </div>
+
+                    <!-- Toggle Ver Eliminadas -->
+                    <div class="col-md-2">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" 
+                                   type="checkbox" 
+                                   role="switch" 
+                                   id="switchEliminadas"
+                                   checked="@MostrarEliminadas"
+                                   @onchange="OnMostrarEliminadasChange" />
+                            <label class="form-check-label" for="switchEliminadas">
+                                <i class="bi bi-eye-slash me-1"></i>Ver eliminadas
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Botón aplicar -->
+                    <div class="col-md-2">
+                        <button class="btn btn-outline-primary w-100" type="button" @onclick="AplicarFiltros">
+                            <i class="bi bi-funnel me-2"></i>Filtrar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    // --- Parámetros con binding bidireccional ---
+    [Parameter] public string SearchText { get; set; } = "";
+    [Parameter] public EventCallback<string> SearchTextChanged { get; set; }
+
+    [Parameter] public string FiltroEstado { get; set; } = "";
+    [Parameter] public EventCallback<string> FiltroEstadoChanged { get; set; }
+
+    [Parameter] public bool MostrarEliminadas { get; set; } = false;
+    [Parameter] public EventCallback<bool> MostrarEliminadasChanged { get; set; }
+
+    // --- Evento al aplicar filtros ---
+    [Parameter] public EventCallback OnAplicarFiltros { get; set; }
+
+    private async Task OnSearchInput(ChangeEventArgs e)
+    {
+        SearchText = e.Value?.ToString() ?? "";
+        await SearchTextChanged.InvokeAsync(SearchText);
+        await OnAplicarFiltros.InvokeAsync();
+    }
+
+    private async Task OnFiltroEstadoChange(ChangeEventArgs e)
+    {
+        FiltroEstado = e.Value?.ToString() ?? "";
+        await FiltroEstadoChanged.InvokeAsync(FiltroEstado);
+        await OnAplicarFiltros.InvokeAsync();
+    }
+
+    private async Task OnMostrarEliminadasChange(ChangeEventArgs e)
+    {
+        MostrarEliminadas = e.Value is bool value && value;
+        await MostrarEliminadasChanged.InvokeAsync(MostrarEliminadas);
+        await OnAplicarFiltros.InvokeAsync();
+    }
+
+    private async Task AplicarFiltros()
+    {
+        await OnAplicarFiltros.InvokeAsync();
+    }
+
+    private async Task LimpiarBusqueda()
+    {
+        SearchText = "";
+        await SearchTextChanged.InvokeAsync(SearchText);
+        await OnAplicarFiltros.InvokeAsync();
+    }
+}

@@ -16,9 +16,4 @@
     <ProjectReference Include="..\Service\Service.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Components\Pages\Admin\Lugares\" />
-    <Folder Include="Components\Pages\Admin\Reservas\" />
-  </ItemGroup>
-
 </Project>

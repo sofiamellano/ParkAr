@@ -34,21 +34,12 @@ builder.Services.AddAuthorization();
 
 builder.Services.AddControllers();
 
-// Configuración (lee de appsettings.json si existe y de variables de entorno si no)
-builder.Configuration
+var configuration = new ConfigurationBuilder()
+    .SetBasePath(Directory.GetCurrentDirectory())
     .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
-    .AddEnvironmentVariables();
-
-var configuration = builder.Configuration;
-
-// Obtener la cadena de conexión
+    .AddEnvironmentVariables()
+    .Build();
 var cadenaConexion = configuration.GetConnectionString("mysqlRemoto");
-
-// Validar que esté definida
-if (string.IsNullOrWhiteSpace(cadenaConexion))
-{
-    throw new Exception("❌ No se encontró la cadena de conexión 'mysqlRemoto'. Verificá las variables en Azure.");
-}
 
 // configuración de inyección de dependencias del DBContext
 builder.Services.AddDbContext<ParkARContext>(
@@ -102,7 +93,7 @@ builder.Services.AddCors(options =>
     options.AddPolicy("AllowSpecificOrigins",
         builder => builder
             .WithOrigins("https://dataparkar.azurewebsites.net",
-                    "https://www.parkar.azurewebsites.net",
+                    //"https://www.parkar.azurewebsites.net",
                     "https://localhost:8000")
             .AllowAnyHeader()
             .AllowAnyMethod());

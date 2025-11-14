@@ -1,0 +1,321 @@
+@page "/admin/lugares"
+@inject ILugarService _lugarService
+@inject IReservaService _reservaService
+@inject FirebaseAuthService _firebaseAuthService
+@inject IUsuarioService _usuarioService
+@inject SweetAlertService _sweetAlert
+@inject NavigationManager _navigationManager
+@rendermode InteractiveServer
+
+<PageTitle>Gestión de Lugares - Admin ParkAR</PageTitle>
+
+@if (!isAuthenticated && !isLoading)
+{
+    <MensajeAccesoRestringido />
+}
+else if (isLoading)
+{
+    <SpinnerCarga Mensaje="Cargando lugares..." />
+}
+else if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="container-fluid py-5">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="alert alert-danger" role="alert">
+                    <h4 class="alert-heading">
+                        <i class="bi bi-exclamation-triangle me-2"></i>Error al cargar lugares
+                    </h4>
+                    <p>@errorMessage</p>
+                    <hr>
+                    <button class="btn btn-outline-danger" @onclick="RetryCargarDatos">
+                        <i class="bi bi-arrow-clockwise me-2"></i>Reintentar
+                    </button>
+                    <button class="btn btn-outline-secondary ms-2" @onclick='() => _navigationManager.NavigateTo("/admin/dashboard")'>
+                        <i class="bi bi-house me-2"></i>Volver al Dashboard
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    <div class="container-fluid py-4">
+        <BreadcrumbAdmin Pagina="Gestión de Lugares" />
+
+        <HeaderSeccion Titulo="Gestión de Lugares"
+                       Descripcion="Administra los espacios de estacionamiento"
+                       Badge="@($"{lugaresTotales.Count} lugares")" />
+
+        <FiltrosLugares @bind-SearchText="searchText"
+                        @bind-MostrarEliminados="mostrarEliminados"
+                        @bind-FiltroEstado="filtroEstado"
+                        OnAplicarFiltros="EventCallback.Factory.Create(this, AplicarFiltros)"
+                        OnNuevoLugar="AbrirModalNuevo" />
+
+        @if (mostrarEliminados && lugaresFiltrados.Any(l => l.IsDeleted))
+        {
+            <div class="alert alert-info mb-3">
+                <i class="bi bi-info-circle me-2"></i>
+                Mostrando <strong>@lugaresFiltrados.Count(l => l.IsDeleted)</strong> lugar(es) eliminado(s)
+            </div>
+        }
+
+        <TablaLugares Lugares="lugaresFiltrados"
+                      ReservasActivas="reservasActivasPorLugar"
+                      OnVerDetalle="VerDetalleLugar"
+                      OnEditar="AbrirModalEditar"
+                      OnEliminar="EliminarLugar"
+                      OnRestaurar="RestaurarLugar" />
+    </div>
+
+    <ModalLugar @ref="modalLugar"
+                Lugar="lugarActual"
+                TodosLosLugares="lugaresTotales"
+                OnGuardar="GuardarLugar" />
+}
+
+@code {
+    private bool isAuthenticated = false;
+    private bool isLoading = true;
+    private Usuario? usuarioAdmin;
+    private string errorMessage = "";
+
+    private List<Lugar> lugaresTotales = new();
+    private List<Lugar> lugaresFiltrados = new();
+    private Dictionary<int, int> reservasActivasPorLugar = new();
+
+    private string searchText = "";
+    private bool mostrarEliminados = false;
+    private string filtroEstado = "";
+
+    private Lugar lugarActual = new();
+    private ModalLugar? modalLugar;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await InicializarPagina();
+    }
+
+    private async Task InicializarPagina()
+    {
+        try
+        {
+            errorMessage = "";
+            isAuthenticated = await VerificarAutenticacionAdmin();
+
+            if (isAuthenticated)
+            {
+                await CargarDatos();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error al cargar lugares: {ex.Message}");
+            errorMessage = ex.Message;
+            isAuthenticated = false;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task RetryCargarDatos()
+    {
+        isLoading = true;
+        errorMessage = "";
+        StateHasChanged();
+        await InicializarPagina();
+    }
+
+    private async Task<bool> VerificarAutenticacionAdmin()
+    {
+        var isAuth = await _firebaseAuthService.IsUserAuthenticated();
+        if (!isAuth) return false;
+
+        var firebaseUser = _firebaseAuthService.CurrentUser;
+        if (firebaseUser == null) return false;
+
+        var usuariosTemp = await _usuarioService.GetAllAsync();
+        usuarioAdmin = usuariosTemp?.FirstOrDefault(u => u.Email == firebaseUser.Email);
+
+        return usuarioAdmin?.TipoUsuario == Service.Enums.TipoUsuarioEnum.Admin;
+    }
+
+    private async Task CargarDatos()
+    {
+        var lugaresActivos = await _lugarService.GetAllAsync() ?? new List<Lugar>();
+        var lugaresEliminados = await _lugarService.GetAllDeletedsAsync() ?? new List<Lugar>();
+        
+        lugaresTotales = lugaresActivos.Concat(lugaresEliminados).OrderBy(l => l.Numero).ToList();
+
+        var todasReservas = await _reservaService.GetAllAsync();
+        var ahora = DateTime.Now;
+        
+        reservasActivasPorLugar = todasReservas?
+            .Where(r => r.EstadoReserva == Service.Enums.EstadoReservaEnum.Activa 
+                && r.FechaInicio <= ahora 
+                && r.FechaFin >= ahora)
+            .GroupBy(r => r.LugarId)
+            .ToDictionary(g => g.Key, g => g.Count()) ?? new();
+
+        await AplicarFiltros();
+    }
+
+    private async Task AplicarFiltros()
+    {
+        lugaresFiltrados = lugaresTotales.Where(l =>
+        {
+            bool cumpleEliminado = mostrarEliminados ? l.IsDeleted : !l.IsDeleted;
+
+            bool cumpleBusqueda = string.IsNullOrWhiteSpace(searchText) ||
+                 l.Numero.ToString().Contains(searchText);
+
+            bool cumpleEstado = true;
+            if (!string.IsNullOrWhiteSpace(filtroEstado))
+            {
+                bool estaOcupado = reservasActivasPorLugar.ContainsKey(l.Id);
+                cumpleEstado = filtroEstado == "ocupado" ? estaOcupado : !estaOcupado;
+            }
+
+            return cumpleEliminado && cumpleBusqueda && cumpleEstado;
+        }).ToList();
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task VerDetalleLugar(Lugar lugar)
+    {
+        var tieneReservaActiva = reservasActivasPorLugar.ContainsKey(lugar.Id);
+        var totalReservas = lugar.Reservas?.Count ?? 0;
+
+        var estado = lugar.IsDeleted ? "Eliminado" :
+                     (tieneReservaActiva ? "Ocupado" : "Disponible");
+
+        var estadoClass = lugar.IsDeleted ? "bg-danger" :
+                          (tieneReservaActiva ? "bg-warning" : "bg-success");
+
+        string reservaActivaTexto = tieneReservaActiva ? "Sí" : "No";
+
+        await _sweetAlert.FireAsync(new SweetAlertOptions
+        {
+            Title = $"Plaza {lugar.Numero}",
+            Html = $@"
+            <div class='text-start'>
+                <p><strong>Número:</strong> {lugar.Numero}</p>
+                <p><strong>Estado:</strong> <span class='badge {estadoClass}'>{estado}</span></p>
+                <hr>
+                <p><strong>Reserva activa:</strong> {reservaActivaTexto}</p>
+                <p><strong>Historial de reservas:</strong> {totalReservas}</p>
+            </div>
+        ",
+            Icon = SweetAlertIcon.Info
+        });
+    }
+
+
+    private void AbrirModalNuevo()
+    {
+        lugarActual = new Lugar();
+        modalLugar?.Abrir();
+    }
+
+    private void AbrirModalEditar(Lugar lugar)
+    {
+        lugarActual = new Lugar { Id = lugar.Id, Numero = lugar.Numero };
+        modalLugar?.Abrir();
+    }
+
+    private async Task GuardarLugar(Lugar lugar)
+    {
+        try
+        {
+            if (lugar.Id == 0)
+            {
+                if (lugaresTotales.Any(l => l.Numero == lugar.Numero && !l.IsDeleted))
+                {
+                    await _sweetAlert.FireAsync("Error", $"Ya existe la Plaza {lugar.Numero}", SweetAlertIcon.Error);
+                    return;
+                }
+
+                await _lugarService.AddAsync(lugar);
+                await _sweetAlert.FireAsync("Creado", $"Plaza {lugar.Numero} creada correctamente", SweetAlertIcon.Success);
+            }
+            else
+            {
+                await _lugarService.UpdateAsync(lugar);
+                await _sweetAlert.FireAsync("Actualizado", $"Plaza {lugar.Numero} actualizada correctamente", SweetAlertIcon.Success);
+            }
+
+            modalLugar?.Cerrar();
+            await CargarDatos();
+        }
+        catch (Exception ex)
+        {
+            await _sweetAlert.FireAsync("Error", $"No se pudo guardar: {ex.Message}", SweetAlertIcon.Error);
+        }
+    }
+
+    private async Task EliminarLugar(Lugar lugar)
+    {
+        if (reservasActivasPorLugar.ContainsKey(lugar.Id))
+        {
+            await _sweetAlert.FireAsync("No se puede eliminar", "Esta plaza tiene una reserva activa", SweetAlertIcon.Warning);
+            return;
+        }
+
+        var resultado = await _sweetAlert.FireAsync(new SweetAlertOptions
+        {
+            Title = "Eliminar Plaza",
+            Text = $"¿Deseas eliminar la Plaza {lugar.Numero}?",
+            Icon = SweetAlertIcon.Warning,
+            ShowCancelButton = true,
+            ConfirmButtonText = "Sí, Eliminar",
+            CancelButtonText = "Cancelar",
+            ConfirmButtonColor = "#dc3545"
+        });
+
+        if (resultado.IsConfirmed)
+        {
+            try
+            {
+                await _lugarService.DeleteAsync(lugar.Id);
+                await _sweetAlert.FireAsync("Eliminado", $"Plaza {lugar.Numero} eliminada", SweetAlertIcon.Success);
+                await CargarDatos();
+            }
+            catch (Exception ex)
+            {
+                await _sweetAlert.FireAsync("Error", $"No se pudo eliminar: {ex.Message}", SweetAlertIcon.Error);
+            }
+        }
+    }
+
+    private async Task RestaurarLugar(Lugar lugar)
+    {
+        var resultado = await _sweetAlert.FireAsync(new SweetAlertOptions
+        {
+            Title = "Restaurar Plaza",
+            Text = $"¿Deseas restaurar la Plaza {lugar.Numero}?",
+            Icon = SweetAlertIcon.Question,
+            ShowCancelButton = true,
+            ConfirmButtonText = "Sí, Restaurar",
+            CancelButtonText = "Cancelar"
+        });
+
+        if (resultado.IsConfirmed)
+        {
+            try
+            {
+                await _lugarService.RestoreAsync(lugar.Id);
+                await _sweetAlert.FireAsync("Restaurado", $"Plaza {lugar.Numero} restaurada", SweetAlertIcon.Success);
+                await CargarDatos();
+            }
+            catch (Exception ex)
+            {
+                await _sweetAlert.FireAsync("Error", $"No se pudo restaurar: {ex.Message}", SweetAlertIcon.Error);
+            }
+        }
+    }
+}
